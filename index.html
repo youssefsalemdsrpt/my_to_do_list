@@ -1618,6 +1618,254 @@
         background: rgba(255, 77, 0, 0.05) !important;
       }
     }
+  
+    /* --- الداشبورد المالية والرسومات البيانية --- */
+    .stats-dashboard {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      margin-top: 14px;
+    }
+    .top-cat-card {
+      background: linear-gradient(135deg, rgba(255, 77, 0, 0.12), rgba(20, 20, 20, 0.95));
+      border: 1px solid rgba(255, 77, 0, 0.35);
+      border-right: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .top-cat-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .top-cat-badge {
+      width: 52px;
+      height: 52px;
+      background: rgba(255, 77, 0, 0.18);
+      border: 1px solid rgba(255, 77, 0, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+    .top-cat-title {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .top-cat-name {
+      font-size: 19px;
+      font-weight: 900;
+      color: var(--gold);
+      margin-top: 2px;
+    }
+    .top-cat-metrics {
+      text-align: left;
+    }
+    .top-cat-amt {
+      font-family: 'Space Mono', monospace;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+    }
+    .top-cat-sub {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 2px;
+    }
+    .chart-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .cb-header {
+      padding: 14px 18px;
+      background: var(--card2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cb-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cb-badge {
+      font-size: 11px;
+      font-family: 'Space Mono', monospace;
+      color: var(--gold);
+      background: rgba(255, 77, 0, 0.1);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .cb-body {
+      padding: 18px 20px;
+    }
+    .cat-bars-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .cat-bar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cbi-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+    .cbi-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .cbi-nums {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cbi-amt {
+      font-family: 'Space Mono', monospace;
+      font-weight: 800;
+      color: var(--text);
+      font-size: 12px;
+    }
+    .cbi-pct {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--gold);
+      background: rgba(255, 77, 0, 0.08);
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 77, 0, 0.2);
+    }
+    .cat-progress-track {
+      width: 100%;
+      height: 8px;
+      background: #1a1a1a;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .cat-progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    /* رسم بياني يومي بالأعمدة */
+    .daily-chart-container {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 140px;
+      padding: 18px 4px 6px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .daily-col {
+      flex: 1;
+      min-width: 18px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .daily-col:hover .daily-tip {
+      opacity: 1;
+      visibility: visible;
+    }
+    .daily-bar {
+      width: 100%;
+      max-width: 14px;
+      background: #262626;
+      border-radius: 3px 3px 0 0;
+      transition: height 0.4s ease, background 0.2s;
+      min-height: 3px;
+    }
+    .daily-bar.has-val {
+      background: linear-gradient(180deg, #FF6B2B, #FF4D00);
+    }
+    .daily-bar.is-peak {
+      background: #00ff88 !important;
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+    }
+    .daily-col.is-today .daily-bar {
+      border: 1px solid #fff;
+    }
+    .daily-lbl {
+      font-family: 'Space Mono', monospace;
+      font-size: 8.5px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .daily-tip {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      background: #1f1f1f;
+      border: 1px solid var(--gold);
+      color: #fff;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: 'Space Mono', monospace;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s;
+      z-index: 10;
+    }
+    .extra-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .es-item {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .es-lbl {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .es-val {
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    @media(max-width: 768px) {
+      .top-cat-card { flex-direction: column; align-items: flex-start; }
+      .top-cat-metrics { text-align: right; }
+      .extra-stats-grid { grid-template-columns: 1fr; }
+    }
+
   </style>
 
   <!-- Firebase SDKs -->
@@ -2814,27 +3062,199 @@
       refreshStats();
     }
 
+    // أيقونات وألوان الفئات
+    const CAT_ICONS = {
+      'أكل': '🍔',
+      'مواصلات': '🚗',
+      'تعليم': '📚',
+      'رياضة': '💪',
+      'ترفيه': '🎮',
+      'ملابس': '👕',
+      'أخرى': '📦'
+    };
+
     function refreshStats() {
       const { y, m } = MONTHS_LIST[statsOff];
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const today = new Date();
+
       let totalExp = 0, totalInc = 0;
-      for (let i = 0; i < NUM_DAYS; i++) {
-        const d = gd(i);
-        if (d.getFullYear() === y && d.getMonth() === m) {
-          if (S.exp[i]) totalExp += S.exp[i].reduce((s, e) => s + e.amt, 0);
-          if (S.inc[i]) totalInc += (S.inc[i] || 0);
+      const catTotals = { 'أكل': 0, 'مواصلات': 0, 'تعليم': 0, 'رياضة': 0, 'ترفيه': 0, 'ملابس': 0, 'أخرى': 0 };
+      const dailyData = [];
+      let maxDayExp = 0;
+      let maxDayNum = null;
+      let daysWithExp = 0;
+
+      // جمع البيانات لجميع أيام الشهر
+      for (let day = 1; day <= daysInMonth; day++) {
+        const curD = new Date(y, m, day);
+        const dayIdx = di(curD);
+        let dayExp = 0;
+        let dayInc = 0;
+
+        if (dayIdx >= 0 && dayIdx < NUM_DAYS) {
+          if (S.exp[dayIdx]) {
+            S.exp[dayIdx].forEach(e => {
+              dayExp += e.amt;
+              const cat = e.cat || 'أخرى';
+              catTotals[cat] = (catTotals[cat] || 0) + e.amt;
+            });
+          }
+          if (S.inc[dayIdx]) {
+            dayInc += (parseFloat(S.inc[dayIdx]) || 0);
+          }
         }
+
+        if (dayExp > 0) {
+          daysWithExp++;
+          if (dayExp > maxDayExp) {
+            maxDayExp = dayExp;
+            maxDayNum = day;
+          }
+        }
+
+        totalExp += dayExp;
+        totalInc += dayInc;
+
+        const isToday = (today.getFullYear() === y && today.getMonth() === m && today.getDate() === day);
+        dailyData.push({ day, amt: dayExp, isToday });
       }
+
       const net = totalInc - totalExp;
+      const avgDaily = daysWithExp > 0 ? Math.round(totalExp / daysWithExp) : 0;
+      const expPercentOfInc = totalInc > 0 ? Math.min(100, Math.round((totalExp / totalInc) * 100)) : 0;
+
+      // ترتيب الفئات من الأكثر صرفاً إلى الأقل
+      const sortedCats = Object.keys(catTotals)
+        .map(c => ({
+          cat: c,
+          amt: catTotals[c],
+          pct: totalExp > 0 ? Math.round((catTotals[c] / totalExp) * 100) : 0
+        }))
+        .filter(c => c.amt > 0)
+        .sort((a, b) => b.amt - a.amt);
+
+      const topCat = sortedCats.length > 0 ? sortedCats[0] : null;
+
       const statsContent = document.getElementById('stats-content');
-      if (statsContent) {
-        statsContent.innerHTML = `
-        <div class="stats-grid">
-          <div class="stat-card"><div class="stat-icon">💸</div><div class="stat-num" style="color:var(--red)">${totalExp.toLocaleString()} ج</div><div class="stat-label">إجمالي المصاريف</div></div>
-          <div class="stat-card"><div class="stat-icon">💵</div><div class="stat-num" style="color:var(--green)">${totalInc.toLocaleString()} ج</div><div class="stat-label">إجمالي الدخل</div></div>
-          <div class="stat-card"><div class="stat-icon">⚖</div><div class="stat-num" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'}">${net.toLocaleString()} ج</div><div class="stat-label">صافي الرصيد</div></div>
-          <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-num" style="color:var(--gold)">${AR_M[m]}</div><div class="stat-label">${y}</div></div>
-        </div>`;
-      }
+      if (!statsContent) return;
+
+      let h = `
+      <div class="stats-dashboard">
+        <!-- 1. البطاقات الأربع الرئيسية -->
+        <div class="stats-grid" style="margin-bottom:0 !important;">
+          <div class="stat-card">
+            <div class="stat-icon">💸</div>
+            <div class="stat-num" style="color:var(--red)">${totalExp.toLocaleString()} ج</div>
+            <div class="stat-label">إجمالي المصاريف</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💵</div>
+            <div class="stat-num" style="color:var(--green)">${totalInc.toLocaleString()} ج</div>
+            <div class="stat-label">إجمالي الدخل</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚖</div>
+            <div class="stat-num" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'}">${net.toLocaleString()} ج</div>
+            <div class="stat-label">صافي الرصيد</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-num" style="color:var(--gold)">${avgDaily.toLocaleString()} ج</div>
+            <div class="stat-label">متوسط الصرف اليومي</div>
+          </div>
+        </div>
+
+        <!-- 2. كارت الفئة الأكثر استهلاكاً للميزانية (أكتر حاجة بصرف عليها فلوسي) -->
+        <div class="top-cat-card">
+          <div class="top-cat-info">
+            <div class="top-cat-badge">${topCat ? (CAT_ICONS[topCat.cat] || '🔥') : '💡'}</div>
+            <div>
+              <div class="top-cat-title">🔥 الفئة الأكثر استهلاكاً للميزانية هذا الشهر</div>
+              <div class="top-cat-name">${topCat ? `${topCat.cat}` : 'لا توجد مصاريف مسجلة لهذا الشهر بعد'}</div>
+            </div>
+          </div>
+          ${topCat ? `
+          <div class="top-cat-metrics">
+            <div class="top-cat-amt">${topCat.amt.toLocaleString()} ج</div>
+            <div class="top-cat-sub">تشكل <b style="color:var(--gold)">${topCat.pct}%</b> من إجمالي مصاريفك</div>
+          </div>` : ''}
+        </div>
+
+        <!-- 3. الرسم البياني لتوزيع المصاريف حسب الفئات (Category Breakdown) -->
+        <div class="chart-box">
+          <div class="cb-header">
+            <span class="cb-title">📊 توزيع المصاريف حسب الفئات</span>
+            <span class="cb-badge">${sortedCats.length} فئات نشطة</span>
+          </div>
+          <div class="cb-body">
+            ${sortedCats.length === 0 ? `
+              <div style="text-align:center; padding:24px; color:var(--muted); font-size:12px;">
+                لم يتم تسجيل أي مصاريف في شهر ${AR_M[m]} ${y}. سجل مصاريفك اليومية لتظهر الإحصائيات هنا!
+              </div>
+            ` : `
+              <div class="cat-bars-list">
+                ${sortedCats.map(c => `
+                  <div class="cat-bar-item">
+                    <div class="cbi-header">
+                      <span class="cbi-name">${CAT_ICONS[c.cat] || '📦'} ${c.cat}</span>
+                      <div class="cbi-nums">
+                        <span class="cbi-amt">${c.amt.toLocaleString()} ج</span>
+                        <span class="cbi-pct">${c.pct}%</span>
+                      </div>
+                    </div>
+                    <div class="cat-progress-track">
+                      <div class="cat-progress-fill" style="width:${c.pct}%; background:${CAT_C[c.cat] || 'var(--gold)'};"></div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        </div>
+
+        <!-- 4. الرسم البياني اليومي لحركة المصاريف (Daily Spending Timeline) -->
+        <div class="chart-box">
+          <div class="cb-header">
+            <span class="cb-title">📈 حركة المصاريف اليومية على مدار الشهر</span>
+            <span class="cb-badge">${AR_M[m]} ${y}</span>
+          </div>
+          <div class="cb-body">
+            <div class="daily-chart-container">
+              ${dailyData.map(d => {
+                const heightPct = maxDayExp > 0 ? Math.max(4, Math.round((d.amt / maxDayExp) * 100)) : 4;
+                const isPeak = (maxDayExp > 0 && d.amt === maxDayExp);
+                return `
+                  <div class="daily-col ${d.isToday ? 'is-today' : ''}">
+                    <div class="daily-tip">يوم ${d.day}: ${d.amt.toLocaleString()} ج</div>
+                    <div class="daily-bar ${d.amt > 0 ? 'has-val' : ''} ${isPeak ? 'is-peak' : ''}" style="height:${d.amt > 0 ? heightPct : 4}%"></div>
+                    <span class="daily-lbl" style="${d.isToday ? 'color:var(--gold);font-weight:900;' : ''}">${d.day}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- معلومات تحليلية سريعة -->
+            <div class="extra-stats-grid">
+              <div class="es-item">
+                <span class="es-lbl">🏆 أعلى يوم في الصرف:</span>
+                <span class="es-val">${maxDayNum ? `يوم ${maxDayNum} (${maxDayExp.toLocaleString()} ج)` : '---'}</span>
+              </div>
+              <div class="es-item">
+                <span class="es-lbl">📉 نسبة المصاريف من الدخل:</span>
+                <span class="es-val" style="color:${expPercentOfInc > 85 ? 'var(--red)' : 'var(--green)'};">${totalInc > 0 ? `${expPercentOfInc}%` : '---'}</span>
+              </div>
+              <div class="es-item">
+                <span class="es-lbl">🗓 الأيام المسجل بها صرف:</span>
+                <span class="es-val">${daysWithExp} من أصل ${daysInMonth} يوم</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      `;
+
+      statsContent.innerHTML = h;
     }
 
     function showPanel(id, btnElement) {

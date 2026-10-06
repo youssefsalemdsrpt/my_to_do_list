@@ -2111,8 +2111,12 @@
             <div class="sec-hd-title">مركز <span>الكورسات والروابط</span></div>
             <div class="sec-hd-sub">سجل كورساتك ومراجعك بروابطها المباشرة</div>
           </div>
-          <button class="curr-month-btn" id="restore-courses-btn" style="display:none;"
-            onclick="forceRestoreCourses()">📥 استرجاع كورساتي (11 كورس)</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="curr-month-btn" id="save-courses-btn" style="display:none; background:rgba(0,255,136,0.15); color:#00ff88; border-color:#00ff88;"
+              onclick="saveCurrentCoursesAsBackup()" title="حفظ القائمة الحالية كنسخة احتياطية دائمة">💾 حفظ كنسخة احتياطية</button>
+            <button class="curr-month-btn" id="restore-courses-btn" style="display:none;"
+              onclick="forceRestoreCourses()">📥 استرجاع كورساتي (8 كورس)</button>
+          </div>
         </div>
 
         <div class="crs-form">
@@ -2207,18 +2211,16 @@
     function di(d) { return Math.round((d - new Date(START.toDateString())) / (864e5)); }
     function ti() { const t = new Date(); t.setHours(0, 0, 0, 0); return Math.max(0, Math.min(NUM_DAYS - 1, di(t))); }
 
+    // قائمة الكورسات الافتراضية الثمانية الجديدة
     const SAVED_COURSES = [
       { id: 1, name: "Introduction to Generative AI", url: "https://www.cloudskillsboost.google/course_templates/536", note: "كورس ند بتاع google يخلص قبل 10/15" },
-      { id: 2, name: "كورس كامل 9 ساعات دليلك الشامل لتعلم التسويق و (الميديا باينج) من الصفر", url: "https://www.youtube.com", note: "كورس احمد صبري 9 ساعات يخلص قبل 30/10" },
-      { id: 3, name: "كورس تعلم كلود من الصفر || Claude 101 in Arabic", url: "https://www.youtube.com/watch?v=oz44Wp22iCU", note: "عرب استيج ساعة ونص تخلص قبل 10/5" },
-      { id: 4, name: "دليلك لفهم مجال الموارد البشرية والتميز فيه", url: "https://www.youtube.com/watch?v=7IAp7JGbrtM", note: "اول اسبوع 1 في اكتوبر" },
-      { id: 5, name: "مونتاج insta Reels", url: "https://www.youtube.com", note: "اول اسبوع في 10" },
-      { id: 6, name: "كورس Excel", url: "https://www.youtube.com", note: "من الان 28/9 لحد 5/10" },
-      { id: 7, name: "python for beginners", url: "https://www.youtube.com", note: "من 10/5 لحد 10/10" },
-      { id: 8, name: "power Bi for data Analysis", url: "https://www.youtube.com", note: "من 10/10 لحد 15/10" },
-      { id: 9, name: "data analysis after courses 1", url: "https://www.youtube.com", note: "15/10" },
-      { id: 10, name: "data analysis after courses 2", url: "https://www.youtube.com", note: "16/10" },
-      { id: 11, name: "data analysis after courses 3", url: "https://www.youtube.com", note: "17/10" }
+      { id: 2, name: "كورس كامل 9 ساعات دليلك الشامل لتعلم التسويق و (الميديا باينج) من الصفر بشكل مجاني تماماً في 2026 !!", url: "https://www.youtube.com", note: "كورس احمد صبري" },
+      { id: 3, name: "كورس excel", url: "https://www.youtube.com", note: "---" },
+      { id: 4, name: "python for beginners", url: "https://www.youtube.com", note: "---" },
+      { id: 5, name: "power bi for data analysis", url: "https://www.youtube.com", note: "---" },
+      { id: 6, name: "data analysis after couses 1", url: "https://www.youtube.com", note: "---" },
+      { id: 7, name: "data analysis after couses 2", url: "https://www.youtube.com", note: "---" },
+      { id: 8, name: "data analysis after couses 3", url: "https://www.youtube.com", note: "---" }
     ];
 
     let isDataLoaded = false;
@@ -2236,7 +2238,8 @@
       extraInc: {},        // الدخول الإضافية المسجلة خلال اليوم
       rolloverFrom: {},    // المبالغ المرحلة من الأيام السابقة
       saved: {},
-      globalCourses: []
+      globalCourses: [],
+      savedCoursesBackup: []
     };
 
     // استرجاع فوري من ذاكرة المتصفح لمنع التصفير
@@ -2314,6 +2317,9 @@
         if (isYoussef(user.email)) {
           const restoreBtn = document.getElementById('restore-courses-btn');
           if (restoreBtn) restoreBtn.style.display = 'inline-block';
+          const saveBtn = document.getElementById('save-courses-btn');
+          if (saveBtn) saveBtn.style.display = 'inline-block';
+          updateRestoreCoursesBtn();
         }
 
         listenToCloud();
@@ -2328,12 +2334,56 @@
       }
     });
 
-    // دالة استرجاع الكورسات الفورية لحسابك فقط
+    // دوال النسخ الاحتياطي الديناميكي للكورسات
+    function getSavedCoursesBackup() {
+      try {
+        const local = localStorage.getItem('dsrpt_saved_courses_backup');
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch(e) {}
+      if (S.savedCoursesBackup && S.savedCoursesBackup.length > 0) {
+        return S.savedCoursesBackup;
+      }
+      return [...SAVED_COURSES];
+    }
+
+    function saveCoursesBackup(courses) {
+      if (!Array.isArray(courses)) return;
+      try {
+        localStorage.setItem('dsrpt_saved_courses_backup', JSON.stringify(courses));
+      } catch(e) {}
+      S.savedCoursesBackup = JSON.parse(JSON.stringify(courses));
+      updateRestoreCoursesBtn();
+    }
+
+    function updateRestoreCoursesBtn() {
+      const btn = document.getElementById('restore-courses-btn');
+      if (!btn) return;
+      const backup = getSavedCoursesBackup();
+      const count = backup.length;
+      btn.textContent = `📥 استرجاع كورساتي (${count} كورس)`;
+    }
+
+    // استرجاع الكورسات المحفوظة باللينكات المحدثة
     function forceRestoreCourses() {
-      S.globalCourses = [...SAVED_COURSES];
+      const backup = getSavedCoursesBackup();
+      S.globalCourses = JSON.parse(JSON.stringify(backup));
       renderGlobalCourses();
       syncToCloud();
-      alert("تم استرجاع الكورسات الـ 11 وحفظها في حسابك بنجاح!");
+      alert(`✅ تم استرجاع كورساتك (${S.globalCourses.length} كورس) باللينكات المحدثة بنجاح!`);
+    }
+
+    // حفظ القائمة المعروضة حالياً كنسخة احتياطية دائمة
+    function saveCurrentCoursesAsBackup() {
+      if (!S.globalCourses || S.globalCourses.length === 0) {
+        alert("لا توجد كورسات في الجدول لحفظها!");
+        return;
+      }
+      saveCoursesBackup(S.globalCourses);
+      syncToCloud();
+      alert(`💾 تم حفظ الـ (${S.globalCourses.length}) كورس الحالية كنسخة احتياطية دائمة بنجاح!`);
     }
 
     // دالة تسجيل الدخول بحساب جوجل مع دعم Fallback
@@ -2378,7 +2428,8 @@
           extraInc: S.extraInc,
           rolloverFrom: S.rolloverFrom,
           saved: S.saved,
-          globalCourses: S.globalCourses
+          globalCourses: S.globalCourses,
+          savedCoursesBackup: S.savedCoursesBackup
         };
 
         docRef.set(payload, { merge: true }).then(() => {
@@ -2408,9 +2459,14 @@
             S[k] = Object.assign({}, S[k] || {}, data[k] || {});
           });
 
+          if (data.savedCoursesBackup && data.savedCoursesBackup.length > 0) {
+            S.savedCoursesBackup = data.savedCoursesBackup;
+            saveCoursesBackup(data.savedCoursesBackup);
+          }
+
           if (isYoussef(currentUser ? currentUser.email : '')) {
             if (!data.globalCourses || data.globalCourses.length === 0) {
-              S.globalCourses = [...SAVED_COURSES];
+              S.globalCourses = getSavedCoursesBackup();
             } else {
               S.globalCourses = data.globalCourses;
             }
@@ -2947,6 +3003,26 @@
       syncToCloud();
     }
 
+    // تعديل كورس أو رابطه مباشرة
+    function editGlobalCourse(id) {
+      const c = S.globalCourses.find(item => item.id === id);
+      if (!c) return;
+      const newName = prompt("اسم الكورس:", c.name);
+      if (newName === null) return;
+      const newUrl = prompt("رابط الكورس المباشر (URL):", c.url);
+      if (newUrl === null) return;
+      const newNote = prompt("ملاحظات الكورس:", c.note || '');
+
+      c.name = newName.trim() || c.name;
+      c.url = newUrl.trim() || c.url;
+      c.note = newNote !== null ? (newNote.trim() || '---') : c.note;
+
+      // تحديث النسخة المحفوظة ومزامنتها تلقائياً
+      saveCoursesBackup(S.globalCourses);
+      renderGlobalCourses();
+      syncToCloud();
+    }
+
     function addGlobalCourse() {
       const nameInp = document.getElementById('crs-name');
       const urlInp = document.getElementById('crs-url');
@@ -2958,6 +3034,7 @@
 
       if (!name || !url) return;
 
+      if (!S.globalCourses) S.globalCourses = [];
       S.globalCourses.push({
         id: Date.now(),
         name: name,
@@ -2965,19 +3042,26 @@
         note: note || '---'
       });
 
+      // حفظ الكورس الجديد تلقائياً في مكان استرجاع كورساتي وتحديث العداد (8 -> 9 -> 10)
+      saveCoursesBackup(S.globalCourses);
+
       nameInp.value = ''; urlInp.value = ''; if (noteInp) noteInp.value = '';
       renderGlobalCourses();
       syncToCloud();
     }
 
     function deleteGlobalCourse(id) {
+      if (!confirm("هل أنت متأكد من حذف هذا الكورس؟")) return;
       S.globalCourses = S.globalCourses.filter(c => c.id !== id);
+      // تحديث النسخة المحفوظة والعداد تلقائياً
+      saveCoursesBackup(S.globalCourses);
       renderGlobalCourses();
       syncToCloud();
     }
 
     function renderGlobalCourses() {
       const tbody = document.getElementById('courses-table-body');
+      updateRestoreCoursesBtn();
       if (!tbody) return;
       if (!S.globalCourses || S.globalCourses.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted)">مفيش كورسات مسجلة حتى الآن</td></tr>';
@@ -2989,7 +3073,12 @@
           <td style="font-weight:700; color:var(--text);">${c.name}</td>
           <td><a href="${c.url}" target="_blank" class="crs-link-btn">🔗 افتح الرابط المباشر ↗</a></td>
           <td style="color:var(--text2); font-size:11px;">${c.note}</td>
-          <td><span class="crs-del-btn" onclick="deleteGlobalCourse(${c.id})">حذف</span></td>
+          <td>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="color:var(--gold); cursor:pointer; font-size:11.5px; font-weight:700;" onclick="editGlobalCourse(${c.id})" title="تعديل الرابط">✏️ تعديل</span>
+              <span class="crs-del-btn" onclick="deleteGlobalCourse(${c.id})" title="حذف الكورس">حذف</span>
+            </div>
+          </td>
         </tr>
       `).join('');
     }

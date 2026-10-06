@@ -7,7 +7,7 @@
   S.settings = S.settings || {};
   let loaded = false, pending = false, timer, installEvt;
   const cfg = () => Object.assign({ on: false, morning: '08:00', evening: '21:00', limit: 0, done: false }, S.settings);
-  const payload = () => ({ tasks: S.tasks, dayTasks: S.dayTasks, taskLinks: S.taskLinks, weekGoals: S.weekGoals, notes: S.notes, exp: S.exp, inc: S.inc, saved: S.saved, globalCourses: S.globalCourses, settings: S.settings });
+  const payload = () => ({ tasks: S.tasks, dayTasks: S.dayTasks, taskLinks: S.taskLinks, weekGoals: S.weekGoals, notes: S.notes, exp: S.exp, inc: S.inc, extraInc: S.extraInc, rolloverFrom: S.rolloverFrom, saved: S.saved, globalCourses: S.globalCourses, savedCoursesBackup: S.savedCoursesBackup, settings: S.settings });
 
   /* ---------- CSS ---------- */
   document.head.insertAdjacentHTML('beforeend', `<style>
@@ -68,7 +68,7 @@
     if (!docRef || !loaded) return;
     pending = true; status(navigator.onLine ? 'save' : 'off');
     clearTimeout(timer);
-    timer = setTimeout(() => { pending = false; docRef.set(payload()).catch(() => status('err')); }, 400);
+    timer = setTimeout(() => { pending = false; docRef.set(payload(), { merge: true }).catch(() => status('err')); }, 400);
   };
   window.listenToCloud = function () {
     if (!docRef) return;
@@ -79,7 +79,7 @@
       let reseed = false;
       if (doc.exists) {
         const d = doc.data();
-        ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'saved', 'settings'].forEach(k => S[k] = d[k] || {});
+        ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'extraInc', 'rolloverFrom', 'saved', 'settings'].forEach(k => S[k] = d[k] || S[k] || {});
         S.globalCourses = (d.globalCourses && d.globalCourses.length) ? d.globalCourses : (me ? [...SAVED_COURSES] : []);
         if (me && !(d.globalCourses && d.globalCourses.length)) reseed = true;
       } else {
@@ -201,6 +201,7 @@
     const exp = [], tasks = [];
     keys(S.exp).forEach(i => S.exp[i].forEach(e => exp.push([ds(i), 'مصروف', e.desc, e.cat, e.amt])));
     keys(S.inc).forEach(i => S.inc[i] && exp.push([ds(i), 'دخل', 'دخل اليوم', '', S.inc[i]]));
+    if (S.extraInc) Object.keys(S.extraInc).forEach(i => (S.extraInc[i] || []).forEach(e => exp.push([ds(i), 'دخل إضافي', e.desc, e.cat, e.amt])));
     exp.sort((a, b) => a[0] < b[0] ? -1 : 1);
     keys(S.dayTasks).forEach(i => S.dayTasks[i].forEach(t => tasks.push([ds(i), t.label, t.cat, 'P' + (6 - [...(t.priority || '⭐⭐⭐')].length), t.time || '', (S.tasks[i] || {})[t.id] ? 'تم' : 'لم يتم', (S.taskLinks[i] || {})[t.id] || ''])));
     return { exp, tasks };

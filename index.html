@@ -2838,6 +2838,11 @@
     function parseSmartSparkText(title, notes, due) {
       let raw = ((title || '') + ' ' + (notes || '')).trim();
       raw = removeVoiceDuplicates(raw);
+
+      // تصحيح الأخطاء الصوتية الشائعة
+      raw = raw.replace(/\b(?:داخل\s+اضافي|داخل\s+إضافي)\b/gi, 'دخل إضافي');
+      raw = raw.replace(/\b(?:الصماريف)\b/gi, 'المصاريف');
+
       const fullText = convertPhoneticToEnglish(raw);
       let dayIdx = null;
 
@@ -2915,80 +2920,104 @@
       const mitMatch = fullText.match(/(?:mit|top\s*3|أهم\s*(?:3|ثلاث)?\s*مهام)[:\s]+([^|;\n\r]+)/i);
       if (mitMatch) mit = mitMatch[1].trim();
 
-      // 6. استخراج المصاريف المسجلة بكافة الصيغ العامية والأوامر الصوتية
-      let expList = [];
-
-      // صيغة 1: EXP: 50 Uber أو صرفت: 50 جنيه
-      const expMatches = [...fullText.matchAll(/(?:exp|expense|spent|paid|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]+)?/gi)];
-      for (const m of expMatches) {
-        const amt = parseFloat(m[1]);
-        let rawDesc = (m[2] || '').trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '');
-        const expCat = categorizeExpense(rawDesc);
-        expList.push({ amt, cat: expCat, desc: rawDesc || (expCat !== 'أخرى' ? expCat : 'مصروف') });
-      }
-
-      // صيغة 2: اعمل حاجه في المصاريف X جنيه Y أو سجل في المصاريف X جنيه Y
-      if (expList.length === 0) {
-        const patExp1 = /(?:اعمل\s+(?:حاجه|حاجة)\s+في\s+المصاريف|سجل\s+(?:في\s+)?المصاريف|حط\s+(?:في\s+)?المصاريف|ضيف\s+(?:في\s+)?المصاريف|في\s+المصاريف|مصاريف|مصروف)\s*([^0-9\n\r]*?)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]*)/gi;
-        const matches1 = [...fullText.matchAll(patExp1)];
-        for (const m of matches1) {
-          const amt = parseFloat(m[2]);
-          const p1 = (m[1] || '').trim();
-          const p2 = (m[3] || '').trim();
-          let desc = `${p1} ${p2}`.trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '').trim();
-          const expCat = categorizeExpense(desc);
-          if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
-          expList.push({ amt, cat: expCat, desc });
-        }
-      }
-
-      // صيغة 3: صرفت في مواصلات 50 جنيه أو دفعت في الأكل 100 جنيه
-      if (expList.length === 0) {
-        const patExp2 = /(?:صرفت|دفعت|اشتريت|شريت)\s+(?:في\s+)?([^0-9\n\r]+?)\s*(?:بـ|ب|مبلغ)?\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi;
-        const matches2 = [...fullText.matchAll(patExp2)];
-        for (const m of matches2) {
-          const desc = m[1].trim().replace(/^(?:في|بـ|ب)\s*/i, '');
-          const amt = parseFloat(m[2]);
-          const expCat = categorizeExpense(desc);
-          expList.push({ amt, cat: expCat, desc: desc || expCat });
-        }
-      }
-
-      // صيغة 4: صرفت 40 جنيه مواصلات
-      if (expList.length === 0) {
-        const patExp3 = /(?:صرفت|دفعت|اشتريت|شريت)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+)?([^|;\n\r]*)/gi;
-        const matches3 = [...fullText.matchAll(patExp3)];
-        for (const m of matches3) {
-          const amt = parseFloat(m[1]);
-          let desc = (m[2] || '').trim().replace(/^(?:في|بـ|ب)\s*/i, '');
-          const expCat = categorizeExpense(desc);
-          if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
-          expList.push({ amt, cat: expCat, desc });
-        }
-      }
-
-      // صيغة 5: 35 جنيه في المصاريف كافيه
-      if (expList.length === 0) {
-        const patExp4 = /(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+المصاريف|مصاريف|مصروف)\s*([^|;\n\r]*)/gi;
-        const matches4 = [...fullText.matchAll(patExp4)];
-        for (const m of matches4) {
-          const amt = parseFloat(m[1]);
-          let desc = (m[2] || '').trim().replace(/^(?:في|بـ|ب)\s*/i, '');
-          const expCat = categorizeExpense(desc);
-          if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
-          expList.push({ amt, cat: expCat, desc });
-        }
-      }
-
-      // 7. استخراج الدخل الإضافي
+      // 6. استخراج الدخل الإضافي بأولوية قصوى (حتى لو وردت كلمة المصاريف في الجملة مثل: زود في المصاريف دخل اضافي 250 جنيه)
       let incList = [];
-      const patInc = /(?:inc|income|earned|دخل\s+إضافي|دخل\s+اضافي|في\s+الدخل|سجل\s+(?:في\s+)?الدخل|دخل|قبضت|جالي)\s*([^0-9\n\r]*?)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]*)/gi;
+      const patInc = /(?:(?:زود|ضيف|حط|سجل|اعمل)?\s*(?:لي\s+)?(?:في\s+(?:المصاريف|الدخل)|بـ|ب)?\s*)?(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|داخل\s+إضافي|دخل|الدخل|قبضت|قبض|جالي|تحويل|إيراد|ايراد|أرباح|ارباح|مكسب|inc|income|earned)\s*([^0-9\n\r]*?)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]*)/gi;
       const incMatches = [...fullText.matchAll(patInc)];
       for (const m of incMatches) {
         const amt = parseFloat(m[2]);
-        let desc = `${m[1].trim()} ${m[3].trim()}`.trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '');
-        if (!desc) desc = 'دخل إضافي';
+        let p1 = (m[1] || '').trim();
+        let p2 = (m[3] || '').trim().replace(/\b(?:في\s+(?:المصاريف|الدخل)|في|بـ|ب)\b/gi, '').trim();
+        let desc = `${p1} ${p2}`.trim().replace(/^(?:من|في|بـ|ب|جنيه|جنية|ج)\s*/i, '').trim();
+        if (!desc || desc === 'دخل إضافي' || desc === 'دخل اضافي' || desc === 'دخل') {
+          desc = 'دخل إضافي';
+        }
         incList.push({ amt, cat: 'دخل إضافي', desc });
+      }
+
+      if (incList.length === 0) {
+        const patIncRev = /(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|دخل|إيراد|ايراد|أرباح|مكسب|income|inc)\s*([^|;\n\r]*)/gi;
+        const incRevMatches = [...fullText.matchAll(patIncRev)];
+        for (const m of incRevMatches) {
+          const amt = parseFloat(m[1]);
+          let desc = (m[2] || '').trim().replace(/^(?:من|في\s+(?:المصاريف|الدخل)|في|بـ|ب)\s*/i, '').trim();
+          if (!desc) desc = 'دخل إضافي';
+          incList.push({ amt, cat: 'دخل إضافي', desc });
+        }
+      }
+
+      // 7. استخراج المصاريف المسجلة (فقط إذا لم يكن الأمر أمراً بالدخل الإضافي)
+      let expList = [];
+      let textWithoutInc = fullText;
+      if (incList.length > 0) {
+        textWithoutInc = textWithoutInc.replace(patInc, '');
+        textWithoutInc = textWithoutInc.replace(/(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|دخل)/gi, '');
+        textWithoutInc = textWithoutInc.replace(/\b(?:في\s+(?:المصاريف|الدخل)|المصاريف|الصماريف)\b/gi, '');
+      }
+
+      // إذا لم يكن هناك دخل إضافي مستخرج في هذا الجزء، نفحص المصاريف:
+      if (incList.length === 0) {
+        // صيغة 1: EXP: 50 Uber أو صرفت: 50 جنيه
+        const expMatches = [...textWithoutInc.matchAll(/(?:exp|expense|spent|paid|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]+)?/gi)];
+        for (const m of expMatches) {
+          const amt = parseFloat(m[1]);
+          let rawDesc = (m[2] || '').trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '');
+          const expCat = categorizeExpense(rawDesc);
+          expList.push({ amt, cat: expCat, desc: rawDesc || (expCat !== 'أخرى' ? expCat : 'مصروف') });
+        }
+
+        // صيغة 2: اعمل حاجه في المصاريف X جنيه Y أو سجل في المصاريف X جنيه Y
+        if (expList.length === 0) {
+          const patExp1 = /(?:اعمل\s+(?:حاجه|حاجة)\s+في\s+المصاريف|سجل\s+(?:في\s+)?المصاريف|حط\s+(?:في\s+)?المصاريف|ضيف\s+(?:في\s+)?المصاريف|في\s+المصاريف|مصاريف|مصروف)\s*([^0-9\n\r]*?)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]*)/gi;
+          const matches1 = [...textWithoutInc.matchAll(patExp1)];
+          for (const m of matches1) {
+            const amt = parseFloat(m[2]);
+            const p1 = (m[1] || '').trim();
+            const p2 = (m[3] || '').trim();
+            let desc = `${p1} ${p2}`.trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '').trim();
+            const expCat = categorizeExpense(desc);
+            if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
+            expList.push({ amt, cat: expCat, desc });
+          }
+        }
+
+        // صيغة 3: صرفت في مواصلات 50 جنيه أو دفعت في الأكل 100 جنيه
+        if (expList.length === 0) {
+          const patExp2 = /(?:صرفت|دفعت|اشتريت|شريت)\s+(?:في\s+)?([^0-9\n\r]+?)\s*(?:بـ|ب|مبلغ)?\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi;
+          const matches2 = [...textWithoutInc.matchAll(patExp2)];
+          for (const m of matches2) {
+            const desc = m[1].trim().replace(/^(?:في|بـ|ب)\s*/i, '');
+            const amt = parseFloat(m[2]);
+            const expCat = categorizeExpense(desc);
+            expList.push({ amt, cat: expCat, desc: desc || expCat });
+          }
+        }
+
+        // صيغة 4: صرفت 40 جنيه مواصلات
+        if (expList.length === 0) {
+          const patExp3 = /(?:صرفت|دفعت|اشتريت|شريت)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+)?([^|;\n\r]*)/gi;
+          const matches3 = [...textWithoutInc.matchAll(patExp3)];
+          for (const m of matches3) {
+            const amt = parseFloat(m[1]);
+            let desc = (m[2] || '').trim().replace(/^(?:في|بـ|ب)\s*/i, '');
+            const expCat = categorizeExpense(desc);
+            if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
+            expList.push({ amt, cat: expCat, desc });
+          }
+        }
+
+        // صيغة 5: 35 جنيه في المصاريف كافيه
+        if (expList.length === 0) {
+          const patExp4 = /(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+المصاريف|مصاريف|مصروف)\s*([^|;\n\r]*)/gi;
+          const matches4 = [...textWithoutInc.matchAll(patExp4)];
+          for (const m of matches4) {
+            const amt = parseFloat(m[1]);
+            let desc = (m[2] || '').trim().replace(/^(?:في|بـ|ب)\s*/i, '');
+            const expCat = categorizeExpense(desc);
+            if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
+            expList.push({ amt, cat: expCat, desc });
+          }
+        }
       }
 
       // 8. التحديد الذكي: هل الأمر يحتوي على مهمة task أم هو أمر مالي بحت (مصاريف / دخل)؟
@@ -3001,8 +3030,14 @@
         let residual = fullText;
         residual = residual.replace(/(?:اعمل\s+(?:حاجه|حاجة)\s+في\s+المصاريف|سجل\s+(?:في\s+)?المصاريف|حط\s+(?:في\s+)?المصاريف|ضيف\s+(?:في\s+)?المصاريف|في\s+المصاريف|مصاريف|مصروف|صرفت|دفعت|اشتريت|شريت|exp|expense|spent|paid).*?(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi, '');
         residual = residual.replace(/(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+المصاريف|مصاريف|مصروف)/gi, '');
-        residual = residual.replace(/(?:دخل\s+إضافي|دخل\s+اضافي|سجل\s+(?:في\s+)?الدخل|في\s+الدخل|دخل|قبضت|جالي|inc|income|earned).*?(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi, '');
-        residual = residual.replace(/\b(today|tomorrow|النهاردة|النهارده|اليوم|بكره|بكرا|غدا|غداً|في|على|من|و|مع|بـ|ب|جنيه|جنية|ج)\b/gi, '');
+        residual = residual.replace(/(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|داخل\s+إضافي|سجل\s+(?:في\s+)?الدخل|في\s+الدخل|دخل|الدخل|قبضت|قبض|جالي|إيراد|أرباح|مكسب|inc|income|earned).*?(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi, '');
+        residual = residual.replace(/(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|دخل)/gi, '');
+
+        // حذف كل الكلمات والأفعال الطلبية والمالية العامة
+        residual = residual.replace(/\b(دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|داخل\s+إضافي|دخل|الدخل|إيراد|أرباح|مكسب|المصاريف|الصماريف|مصاريف|مصروف)\b/gi, '');
+        residual = residual.replace(/\b(زود\s+لي|زودلي|زود|ضيف\s+لي|ضيفلي|ضيف|حط\s+لي|حطلي|حط|سجل\s+لي|سجلي|سجل|اعمل\s+لي|اعملي|اعمل|اكتب\s+لي|اكتبلي|اكتب|قولتله|اقول\s*له|عايز|عاوز|اريد|ممكن|لو\s*سمحت|يا|لي|add|put|record|create)\b/gi, '');
+        residual = residual.replace(/\b(فلوس|كاش|جنيه|جنية|ج|egp|le)\b/gi, '');
+        residual = residual.replace(/\b(today|tomorrow|النهاردة|النهارده|اليوم|بكره|بكرا|غدا|غداً|في|على|من|و|مع|بـ|ب)\b/gi, '');
         residual = residual.trim().replace(/^[\s:,.\-|]+|[\s:,.\-|]+$/g, '');
 
         const allExpDesc = [...expList, ...incList].map(e => e.desc).join(' ');
@@ -3020,7 +3055,7 @@
       cleanLabel = cleanLabel.replace(/(?:بريتي|بايورتي|برايورتي|priority|أولوية)\s*(?:بتاعتها\s*)?(?:5|4|3|2|1|p[1-5]|⭐⭐⭐⭐⭐|⭐⭐⭐⭐|⭐⭐⭐|⭐⭐|⭐)/gi, '');
       cleanLabel = cleanLabel.replace(/(?:في\s+)?(?:كاتيجوري|كاتجري|قسم|category)\s*(?:كورسز|كورسات|courses|course|sport|study|work|date|personal|ديني|tasks)/gi, '');
       cleanLabel = cleanLabel.replace(/(?:ما\s*بين|بين|من)?\s*(?:الصلوات\s*)?(?:من\s*)?(?:مثلا\s*)?(?:المغرب\s*(?:لـ|إلى|للعشاء|للعشا|والعشاء|والعشا)|الفجر\s*(?:لـ|إلى|للظهر|والظهر)|الظهر\s*(?:لـ|إلى|للعصر|والعصر)|العصر\s*(?:لـ|إلى|للمغرب|والمغرب)|العشاء\s*(?:لـ|إلى|للفجر|والفجر)|فترة\s*[\w\u0600-\u06FF]+)/gi, '');
-      cleanLabel = cleanLabel.replace(/\b(زود|ضيف|اعمل|حط|سجل|وعامل\s*ايه|واعمل|وخليه|وخليها|ويحط|يحطها|add|create|put|set)\b/gi, '');
+      cleanLabel = cleanLabel.replace(/\b(زود\s+لي|زودلي|زود|ضيف\s+لي|ضيفلي|ضيف|حط\s+لي|حطلي|حط|سجل\s+لي|سجلي|سجل|وعامل\s*ايه|واعمل|وخليه|وخليها|ويحط|يحطها|اعمل\s+لي|اعمل|add|create|put|set)\b/gi, '');
       cleanLabel = cleanLabel.replace(/\b(عنوان\s+التاسك|اسم\s+التاسك|تاسك|task|مهمة|مهمه)\b/gi, '');
       cleanLabel = cleanLabel.replace(/\b(بتاعتها|بتاعها|الميعاد|ميعاد|والميعاد|بتاع|بتاعه|بتاعت|كذا|اقول\s*له|مثلا|مثلاً)\b/gi, '');
       cleanLabel = cleanLabel.replace(/^\s*(?:في|on|at|for)\s+/gi, '');
@@ -3473,6 +3508,25 @@
 
     function loadDay(idx) {
       S.cur = idx;
+
+      // تصحيح ذاتي فوري إذا كان هناك مهمة أو مصروف مسجلان خطأً من أمر دخل إضافي
+      if (S.dayTasks && S.dayTasks[idx]) {
+        const wrongTaskIdx = S.dayTasks[idx].findIndex(t => /زود.*(?:المصاريف|الصماريف).*دخل.*اضافي/i.test(t.label) || /زود.*(?:المصاريف|الصماريف).*داخل.*اضافي/i.test(t.label) || /داخل\s*اضافي/i.test(t.label));
+        if (wrongTaskIdx !== -1) {
+          const removed = S.dayTasks[idx].splice(wrongTaskIdx, 1)[0];
+          if (removed && S.tasks && S.tasks[idx]) delete S.tasks[idx][removed.id];
+          if (S.exp && S.exp[idx]) {
+            const wrongExpIdx = S.exp[idx].findIndex(e => /دخل.*اضافي|داخل.*اضافي/i.test(e.desc));
+            if (wrongExpIdx !== -1) {
+              const wrongExp = S.exp[idx].splice(wrongExpIdx, 1)[0];
+              if (!S.extraInc) S.extraInc = {};
+              if (!S.extraInc[idx]) S.extraInc[idx] = [];
+              S.extraInc[idx].push({ id: Date.now() + Math.random(), desc: 'دخل إضافي', amt: wrongExp.amt, cat: 'دخل إضافي' });
+            }
+          }
+          syncToCloud();
+        }
+      }
       const daySel = document.getElementById('day-select');
       if (daySel) daySel.value = idx;
       const d = gd(idx), wk = getWeekNum(idx), isSaved = !!S.saved[idx];

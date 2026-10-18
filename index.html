@@ -2158,7 +2158,6 @@
       </div>
       <div class="tb-right">
         <button class="btn" id="btn-spark-ai-cmd" onclick="promptSparkCommand()" style="padding:4px 9px; font-size:11px; border-radius:4px; font-weight:700; background:rgba(255,77,0,0.18); color:#FF4D00; border:1px solid #FF4D00;" title="إدخال أو إملاء أمر صوتي ذكي لـ Spark مباشرة">+ 🤖 أمر ذكي لـ Spark</button>
-        <button class="btn" id="btn-sync-spark" onclick="syncWithSparkTasks()" style="padding:4px 9px; font-size:11px; border-radius:4px; font-weight:700; background:rgba(0,255,136,0.15); color:#00ff88; border:1px solid #00ff88;" title="مزامنة فورية مع مهام Spark">⚡ مزامنة مع Spark</button>
         <button class="btn btn-gold" id="btn-emergency-recover" onclick="emergencyRecoverData()" style="padding:4px 9px; font-size:11px; border-radius:4px; font-weight:700;" title="فحص واسترجاع بيانات الأيام السابقة من ذاكرة المتصفح">📥 فحص واسترجاع البيانات</button>
         <div class="cloud-indicator" id="sync-status" title="حالة الاتصال">
           <span class="pulse-dot"></span>
@@ -2723,21 +2722,10 @@
       alert(`💾 تم حفظ الـ (${S.globalCourses.length}) كورس الحالية كنسخة احتياطية دائمة بنجاح!`);
     }
 
-    // دالة تسجيل الدخول بحساب جوجل مع إجبار طلب صلاحية Tasks (Google Tasks Consent)
+        // دالة تسجيل الدخول بحساب جوجل
     function loginWithGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/tasks');
-      provider.setCustomParameters({ prompt: 'consent', access_type: 'offline' });
-
-      auth.signInWithPopup(provider).then(res => {
-        const token = (res.credential && res.credential.accessToken) ? res.credential.accessToken : (res._tokenResponse ? res._tokenResponse.oauthAccessToken : null);
-        if (token) {
-          localStorage.setItem('dsrpt_g_token', token);
-          setTimeout(syncWithSparkTasks, 500);
-        } else {
-          alert("تم تسجيل الدخول. اضغط على زر مزامنة مع Spark لمتابعة الربط.");
-        }
-      }).catch(err => {
+      auth.signInWithPopup(provider).catch(err => {
         if (err.code === 'auth/popup-blocked') {
           auth.signInWithRedirect(provider);
         } else {
@@ -2747,14 +2735,7 @@
       });
     }
 
-    // استلام التوكن في حالة Redirect
-    auth.getRedirectResult().then(res => {
-      const token = (res && res.credential && res.credential.accessToken) ? res.credential.accessToken : (res && res._tokenResponse ? res._tokenResponse.oauthAccessToken : null);
-      if (token) {
-        localStorage.setItem('dsrpt_g_token', token);
-        setTimeout(syncWithSparkTasks, 500);
-      }
-    }).catch(() => {});
+    auth.getRedirectResult().catch(() => {});
 
     // المحلل الذكي لنصوص وأوامر Spark (مهام، تواريخ، أولويات، صلوات، MIT، مصاريف، ودخل - ثنائي اللغة عربي وإنجليزي ومكس)
     function parseSmartSparkText(title, notes, due) {
@@ -3017,123 +2998,6 @@
 
       const d = gd(targetDayIdx);
       alert("✅ تم تنفيذ وتوزيع أمرك بنجاح!\n\n📅 اليوم: " + d.getDate() + " " + AR_M[d.getMonth()] + " " + d.getFullYear() + "\n📌 المهمة: " + p.cleanLabel + " (" + p.priority + ")\n📁 القسم: " + p.cat + "\n🕌 فترة الصلاة: " + (p.period ? PRAYER_PERIODS[p.period].name : 'بدون ربط') + "\n📝 MIT: " + (p.mit || '---') + "\n💸 مصاريف: " + (p.expList.length > 0 ? p.expList.map(x=>x.amt+'ج '+x.desc).join(', ') : 'لا يوجد') + "\n💵 دخل إضافي: " + (p.incList.length > 0 ? p.incList.map(x=>x.amt+'ج').join(', ') : 'لا يوجد'));
-    }
-
-    // مزامنة مهام Spark (Google Tasks) مع DSRPT Tasks وتوزيع البيانات تلقائياً
-    async function syncWithSparkTasks() {
-      const token = localStorage.getItem('dsrpt_g_token');
-      const btn = document.getElementById('btn-sync-spark');
-      if (btn) btn.innerHTML = '⏳ جاري المزامنة...';
-
-      if (!token) {
-        if (btn) btn.innerHTML = '⚡ مزامنة مع Spark';
-        loginWithGoogle();
-        return;
-      }
-
-      try {
-        const res = await fetch('https://tasks.googleapis.com/tasks/v1/lists/@default/tasks?showCompleted=true&maxResults=50', {
-          headers: { Authorization: 'Bearer ' + token }
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          const errMsg = errData.error?.message || ('HTTP ' + res.status);
-          if (res.status === 401) {
-            localStorage.removeItem('dsrpt_g_token');
-            if (btn) btn.innerHTML = '⚡ مزامنة مع Spark';
-            alert("⚠️ انتهت جلسة جوجل أو لم يتم تفعيل الصلاحية بعد. سيتم فتح نافذة تسجيل الدخول الآن.");
-            loginWithGoogle();
-            return;
-          }
-          throw new Error(errMsg);
-        }
-
-        const data = await res.json();
-        const items = data.items || [];
-        let newCount = 0;
-        let lastTargetDay = null;
-
-        items.forEach(gt => {
-          if (!gt.title || !gt.title.trim()) return;
-          const isDone = gt.status === 'completed';
-          const p = parseSmartSparkText(gt.title, gt.notes, gt.due);
-          const targetDayIdx = p.dayIdx;
-          lastTargetDay = targetDayIdx;
-
-          const targetTasks = getDayTasksList(targetDayIdx);
-          if (!S.tasks[targetDayIdx]) S.tasks[targetDayIdx] = {};
-
-          const exists = targetTasks.find(t => t.id === gt.id || t.label.trim() === p.cleanLabel);
-
-          if (!exists) {
-            targetTasks.push({
-              id: gt.id,
-              label: p.cleanLabel,
-              cat: p.cat,
-              priority: p.priority,
-              period: p.period,
-              fromSpark: true
-            });
-            if (isDone) S.tasks[targetDayIdx][gt.id] = true;
-            newCount++;
-          } else {
-            if (isDone && !S.tasks[targetDayIdx][exists.id]) {
-              S.tasks[targetDayIdx][exists.id] = true;
-            }
-          }
-
-          if (p.mit) {
-            if (!S.notes[targetDayIdx]) S.notes[targetDayIdx] = {};
-            S.notes[targetDayIdx].mit = p.mit;
-          }
-
-          if (p.expList && p.expList.length > 0) {
-            if (!S.exp[targetDayIdx]) S.exp[targetDayIdx] = [];
-            p.expList.forEach(e => {
-              const already = S.exp[targetDayIdx].find(x => x.desc === e.desc && x.amt === e.amt);
-              if (!already) {
-                S.exp[targetDayIdx].push({ id: Date.now() + Math.random(), desc: e.desc, amt: e.amt, cat: e.cat });
-              }
-            });
-          }
-
-          if (p.incList && p.incList.length > 0) {
-            if (!S.extraInc) S.extraInc = {};
-            if (!S.extraInc[targetDayIdx]) S.extraInc[targetDayIdx] = [];
-            p.incList.forEach(e => {
-              const already = S.extraInc[targetDayIdx].find(x => x.desc === e.desc && x.amt === e.amt);
-              if (!already) {
-                S.extraInc[targetDayIdx].push({ id: Date.now() + Math.random(), desc: e.desc, amt: e.amt, cat: e.cat });
-              }
-            });
-            const { totalAvailable } = getDayIncomeDetails(targetDayIdx);
-            S.inc[targetDayIdx] = totalAvailable;
-          }
-        });
-
-        if (lastTargetDay !== null) {
-          loadDay(lastTargetDay);
-        } else {
-          loadDay(S.cur);
-        }
-
-        updateSidebar();
-        syncToCloud();
-
-        if (btn) btn.innerHTML = '✅ متزامن مع Spark';
-        setTimeout(() => { if (btn) btn.innerHTML = '⚡ مزامنة مع Spark'; }, 3000);
-
-        if (newCount > 0) {
-          alert("✅ تم سحب (" + newCount + ") بيانات ومهام جديدة أضفتها عبر Spark وتوزيعها في التطبيق بنجاح!");
-        } else {
-          alert("ℹ️ لم يتم العثور على مهام جديدة غير مسجلة في Google Tasks.\n(إذا كانت المهمة مضافة في يوم آخر مثل 30 أكتوبر، اختر اليوم من قائمة الأيام بالأسفل!)");
-        }
-      } catch (err) {
-        console.error("Spark sync error:", err);
-        if (btn) btn.innerHTML = '⚡ مزامنة مع Spark';
-        alert("⚠️ تعذر مزامنة Google Tasks:\n" + (err.message || err) + "\n\n💡 يمكنك أيضاً استخدام زر «+ 🤖 أمر ذكي لـ Spark» لإدخال وتوزيع الأوامر الذكية بضغطة واحدة مباشرة!");
-      }
     }
 
     // دالة تسجيل الخروج
@@ -3733,25 +3597,11 @@
       syncToCloud();
     }
 
-    function toggleTask(idx, tid) {
+        function toggleTask(idx, tid) {
       if (!S.tasks[idx]) S.tasks[idx] = {};
       S.tasks[idx][tid] = !S.tasks[idx][tid];
-      const isDone = S.tasks[idx][tid];
       renderTasks(idx);
       syncToCloud();
-
-      // تحديث حالة المهمة في جوجل تلقائياً لو كانت المهمة متزامنة مع Spark
-      const token = localStorage.getItem('dsrpt_g_token');
-      if (token && tid && !tid.startsWith('t_')) {
-        fetch(`https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/${tid}`, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ status: isDone ? 'completed' : 'needsAction' })
-        }).catch(() => {});
-      }
     }
 
     function editTaskLabel(idx, i, newVal) {
@@ -4526,7 +4376,7 @@
     
 
 
-    window.onload = function () {
+        window.onload = function () {
       // 1. استرجاع فوري من الذاكرة المحلية كخط دفاع أول ضد التصفير
       tryLoadLocalCache();
       buildSelect();
@@ -4535,9 +4385,6 @@
       loadDay(ti());
       updateSidebar();
       renderGlobalCourses();
-      if (localStorage.getItem('dsrpt_g_token')) {
-        setTimeout(syncWithSparkTasks, 1000);
-      }
     };
   </script>
 

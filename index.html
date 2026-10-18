@@ -2451,12 +2451,21 @@
         <button type="button" onclick="closeSparkModal()" style="background:transparent; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:0 4px; font-weight:bold;">✕</button>
       </div>
 
-      <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+      <div style="padding:20px; display:flex; flex-direction:column; gap:12px;">
+        <!-- اختيار لغة اللاقط الصوتي -->
+        <div style="display:flex; align-items:center; justify-content:space-between; background:#181818; padding:8px 12px; border-radius:8px; border:1px solid #282828;">
+          <span style="font-size:11.5px; font-weight:700; color:var(--text2);">🌐 لغة المايك (يفهم عربي وإنجليزي):</span>
+          <div style="display:flex; gap:4px; background:#121212; padding:3px; border-radius:6px; border:1px solid var(--border);">
+            <button type="button" id="btn-voice-lang-ar" onclick="setSparkVoiceLang('ar-EG')" style="padding:4px 10px; font-size:11px; font-weight:800; border-radius:4px; border:none; cursor:pointer; background:var(--gold); color:#0a0a0a;">🇪🇬 عربي ومكس</button>
+            <button type="button" id="btn-voice-lang-en" onclick="setSparkVoiceLang('en-US')" style="padding:4px 10px; font-size:11px; font-weight:800; border-radius:4px; border:none; cursor:pointer; background:transparent; color:var(--text2);">🇬🇧 English</button>
+          </div>
+        </div>
+
         <div style="position:relative;">
-          <textarea id="spark-cmd-input" rows="4" style="width:100%; background:#1a1a1a; border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-family:'Cairo', sans-serif; font-size:13px; color:#F5F0EB; outline:none; resize:none; line-height:1.6;" placeholder="اكتب هنا أو اضغط على زر المايك وتحدث بالصوت...&#10;(يفهم عربي و English ومكس)"></textarea>
+          <textarea id="spark-cmd-input" rows="4" style="width:100%; background:#1a1a1a; border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-family:'Cairo', sans-serif; font-size:13px; color:#F5F0EB; outline:none; resize:none; line-height:1.6;" placeholder="تحدث بالصوت أو اكتب هنا... (الكلمات الإنجليزية تتحول تلقائياً لإنجليزي)"></textarea>
           <div id="spark-mic-status" style="display:none; font-size:11px; font-weight:700; color:#FF4D00; margin-top:6px; align-items:center; gap:6px;">
             <span class="pulse-dot" style="background:#FF4D00; box-shadow:0 0 8px #FF4D00;"></span>
-            <span id="spark-mic-status-txt">جاري الاستماع... تحدث الآن (عربي / English)</span>
+            <span id="spark-mic-status-txt">جاري الاستماع... تحدث براحتك وعند الانتهاء اضغط إنهاء</span>
           </div>
         </div>
 
@@ -2468,7 +2477,7 @@
           </button>
 
           <!-- زر المسح -->
-          <button type="button" onclick="document.getElementById('spark-cmd-input').value=''; accumulatedVoiceText='';" style="padding:10px 14px; border-radius:6px; border:1px solid var(--border); background:#1a1a1a; color:var(--text2); font-family:'Cairo', sans-serif; font-size:12px; font-weight:700; cursor:pointer;">
+          <button type="button" onclick="clearSparkInput()" style="padding:10px 14px; border-radius:6px; border:1px solid var(--border); background:#1a1a1a; color:var(--text2); font-family:'Cairo', sans-serif; font-size:12px; font-weight:700; cursor:pointer;">
             مسح
           </button>
         </div>
@@ -2851,17 +2860,255 @@
       return { dayIdx, cleanLabel, priority, cat, period, mit, expList, incList };
     }
 
-        // فتح نافذة أمر Spark (فارغة تماماً ومجهزة للمايك أو الكتابة)
+            // قاموس تحويل الكلمات والمصطلحات الإنجليزية المنطوقة بالعربي إلى كتابة إنجليزية صحيحة
+    function convertPhoneticToEnglish(text) {
+      if (!text) return '';
+      const enMap = [
+        // الأقسام والكاتيجوري
+        { re: /\b(?:كاتيجوري|كاتجري|كتجري|كاتيجري)\b/gi, en: 'category' },
+        { re: /\b(?:كورسز|كورسات)\b/gi, en: 'Courses' },
+        { re: /\b(?:كورس)\b/gi, en: 'Course' },
+        { re: /\b(?:سبورت)\b/gi, en: 'Sport' },
+        { re: /\b(?:ستادي|استادي)\b/gi, en: 'Study' },
+        { re: /\b(?:بيرسونال|برسونال)\b/gi, en: 'Personal' },
+        { re: /\b(?:ورك)\b/gi, en: 'Work' },
+        { re: /\b(?:تاسك|تاسكات)\b/gi, en: 'task' },
+        { re: /\b(?:تاسكس)\b/gi, en: 'Tasks' },
+        { re: /\b(?:ديت)\b/gi, en: 'Date' },
+
+        // الأولويات (Priorities)
+        { re: /\b(?:بريتي|بايورتي|برايورتي|بريورتي|بريروتي)\b/gi, en: 'Priority' },
+        { re: /\b(?:فايف)\b/gi, en: '5' },
+        { re: /\b(?:فور)\b/gi, en: '4' },
+        { re: /\b(?:ثري|سري)\b/gi, en: '3' },
+        { re: /\b(?:تو)\b/gi, en: '2' },
+        { re: /\b(?:وان)\b/gi, en: '1' },
+
+        // مصطلحات المذاكرة والشغل والتقنية
+        { re: /\b(?:ريفيجن|ريفيجنن|ريفيجنز)\b/gi, en: 'Revision' },
+        { re: /\b(?:داتا|بيانات)\b/gi, en: 'Data' },
+        { re: /\b(?:اناليسيس|اناليسز|اناليتكس)\b/gi, en: 'Analysis' },
+        { re: /\b(?:ان)\b/gi, en: 'in' },
+        { re: /\b(?:ريكورد|ركورد)\b/gi, en: 'record' },
+        { re: /\b(?:ميتنج|ميتينج)\b/gi, en: 'Meeting' },
+        { re: /\b(?:انترفيو)\b/gi, en: 'Interview' },
+        { re: /\b(?:بروجكت)\b/gi, en: 'Project' },
+        { re: /\b(?:كلاينت)\b/gi, en: 'Client' },
+        { re: /\b(?:كول)\b/gi, en: 'Call' },
+        { re: /\b(?:اونلاين)\b/gi, en: 'Online' },
+        { re: /\b(?:اوفلاين)\b/gi, en: 'Offline' },
+        { re: /\b(?:لاب)\b/gi, en: 'Lab' },
+        { re: /\b(?:شيت|شيتات)\b/gi, en: 'Sheet' },
+        { re: /\b(?:برزنتيشن|بريزنتيشن)\b/gi, en: 'Presentation' },
+        { re: /\b(?:كود|كودنج)\b/gi, en: 'Code' },
+        { re: /\b(?:ديزاين)\b/gi, en: 'Design' },
+        { re: /\b(?:جيم)\b/gi, en: 'Gym' },
+        { re: /\b(?:ورك\s*اوت|وركاوت)\b/gi, en: 'Workout' },
+        { re: /\b(?:اوبر|أوبر)\b/gi, en: 'Uber' },
+        { re: /\b(?:كريم|كاريم)\b/gi, en: 'Careem' },
+        { re: /\b(?:ايميل|إيميل)\b/gi, en: 'Email' },
+        { re: /\b(?:بايثون)\b/gi, en: 'Python' },
+        { re: /\b(?:اكسل|اكسيل)\b/gi, en: 'Excel' },
+        { re: /\b(?:باور\s*بي\s*اي|باور\s*بيآي)\b/gi, en: 'Power BI' },
+        { re: /\b(?:ماشين\s*ليرنينج)\b/gi, en: 'Machine Learning' },
+        { re: /\b(?:اي\s*اي|ايه\s*اي)\b/gi, en: 'AI' }
+      ];
+
+      let res = text;
+      enMap.forEach(item => {
+        res = res.replace(item.re, item.en);
+      });
+      return res;
+    }
+
+    // إزالة التكرارات الناتجة عن تعليق أو إعادة لاقط الصوت على الموبايل
+    function removeVoiceDuplicates(text) {
+      if (!text) return '';
+      let s = text;
+      // إزالة تكرار الكلمة المفردة المتتالية (مثل "النهارده النهارده" -> "النهارده")
+      s = s.replace(/(\b[\w\u0600-\u06FF]+\b)(?:\s+\1\b)+/gi, '$1');
+      // إزالة تكرار العبارات من كلمتين (مثل "النهارده الكاتب النهارده الكاتب" -> "النهارده الكاتب")
+      s = s.replace(/(\b[\w\u0600-\u06FF]+\s+[\w\u0600-\u06FF]+\b)(?:\s+\1\b)+/gi, '$1');
+      // إزالة تكرار العبارات من 3 كلمات
+      s = s.replace(/(\b[\w\u0600-\u06FF]+(?:\s+[\w\u0600-\u06FF]+){2}\b)(?:\s+\1\b)+/gi, '$1');
+      // فحص إضافي للمفرد
+      s = s.replace(/(\b[\w\u0600-\u06FF]+\b)(?:\s+\1\b)+/gi, '$1');
+      return s.trim();
+    }
+
+    // المحلل الذكي لنصوص وأوامر Spark (ثنائي اللغة: عربي وإنجليزي ومكس مع معالجة ذكية للعنوان والكاتيجوري)
+    function parseSmartSparkText(title, notes, due) {
+      let raw = ((title || '') + ' ' + (notes || '')).trim();
+      raw = removeVoiceDuplicates(raw);
+      const fullText = convertPhoneticToEnglish(raw);
+      let dayIdx = null;
+
+      if (due) {
+        const d = new Date(due);
+        if (!isNaN(d.getTime())) dayIdx = di(d);
+      }
+
+      // 1. استخراج التاريخ (عربي وإنجليزي وكلمات اليوم/بكرة)
+      if (/\b(today|النهاردة|النهارده|اليوم)\b/i.test(fullText)) {
+        const t = new Date(); t.setHours(0,0,0,0); dayIdx = di(t);
+      } else if (/\b(tomorrow|بكره|بكرا|غدا|غداً)\b/i.test(fullText)) {
+        const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(0,0,0,0); dayIdx = di(t);
+      }
+
+      const EN_M = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const AR_M = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+      if (dayIdx === null) {
+        const dMatch = fullText.match(/(\d{4}[-/]\d{1,2}[-/]\d{1,2})|(\d{1,2})[-/](\d{1,2})|(\d{1,2})(?:st|nd|rd|th)?\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)|(\d{1,2})\s*(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/i);
+        if (dMatch) {
+          const nowYear = 2026;
+          if (dMatch[1]) {
+            dayIdx = di(new Date(dMatch[1]));
+          } else if (dMatch[2] && dMatch[3]) {
+            dayIdx = di(new Date(nowYear, parseInt(dMatch[3]) - 1, parseInt(dMatch[2])));
+          } else if (dMatch[4] && dMatch[5]) {
+            const prefix = dMatch[5].toLowerCase().slice(0, 3);
+            const mIdx = EN_M.indexOf(prefix);
+            if (mIdx !== -1) dayIdx = di(new Date(nowYear, mIdx, parseInt(dMatch[4])));
+          } else if (dMatch[6] && dMatch[7]) {
+            const mIdx = AR_M.indexOf(dMatch[7]);
+            if (mIdx !== -1) dayIdx = di(new Date(nowYear, mIdx, parseInt(dMatch[6])));
+          }
+        }
+      }
+
+      if (dayIdx === null || isNaN(dayIdx) || dayIdx < 0 || dayIdx >= NUM_DAYS) {
+        dayIdx = ti();
+      }
+
+      // 2. الأولوية (P1 إلى P5) بدعم بريتي، بايورتي، والأرقام بالإنجليزية والعربية
+      let priority = '⭐⭐⭐';
+      if (/\b(?:p1|priority\s*1|أولوية\s*1|بايورتي\s*1|بريتي\s*1|أولى|one|وان)\b/i.test(fullText)) priority = '⭐⭐⭐⭐⭐';
+      else if (/\b(?:p2|priority\s*2|أولوية\s*2|بايورتي\s*2|بريتي\s*2|تانية|two|تو)\b/i.test(fullText)) priority = '⭐⭐⭐⭐';
+      else if (/\b(?:p4|priority\s*4|أولوية\s*4|بايورتي\s*4|بريتي\s*4|رابعة|four|فور)\b/i.test(fullText)) priority = '⭐⭐';
+      else if (/\b(?:p5|priority\s*(?:بتاعتها\s*)?5|lowest\s*priority|أولوية\s*5|بايورتي\s*(?:بتاعتها\s*)?5|بريتي\s*(?:بتاعتها\s*)?5|فايف|five|خامسة)\b/i.test(fullText)) priority = '⭐';
+
+      // 3. القسم (Category)
+      let cat = 'Tasks';
+      if (/courses?|كورس|كورسات/i.test(fullText)) cat = 'Course';
+      else if (/sport|gym|جيم|رياضة|تمرين|workout/i.test(fullText)) cat = 'Sport';
+      else if (/study|مذاكرة|دراسة|exam|امتحان/i.test(fullText)) cat = 'Study';
+      else if (/work|شغل|وظيفة|عميل|client|project/i.test(fullText)) cat = 'Work';
+      else if (/date|مشوار|خروجة|مقابلة|انترفيو|interview|meeting/i.test(fullText)) cat = 'Date';
+      else if (/personal|شخصي/i.test(fullText)) cat = 'Personal';
+      else if (/ديني|دين|صلاة|deen|prayer/i.test(fullText)) cat = 'ديني';
+
+      // 4. فترة الصلاة (فحص المدى الزوجي أولاً لضمان الدقة مثل: المغرب للعشاء)
+      let period = null;
+      if (/مغرب.*(?:عشاء|عشا)|maghrib.*isha/i.test(fullText)) period = 'maghrib_isha';
+      else if (/عصر.*مغرب|asr.*maghrib/i.test(fullText)) period = 'asr_maghrib';
+      else if (/ظهر.*عصر|dhuhr.*asr/i.test(fullText)) period = 'dhuhr_asr';
+      else if (/فجر.*ظهر|fajr.*dhuhr/i.test(fullText)) period = 'fajr_dhuhr';
+      else if (/عشاء.*فجر|isha.*fajr/i.test(fullText)) period = 'isha_fajr';
+      else if (/فجر|صبح|fajr|dawn|morning/i.test(fullText)) period = 'fajr_dhuhr';
+      else if (/ظهر|dhuhr|noon|midday/i.test(fullText)) period = 'dhuhr_asr';
+      else if (/عصر|asr|afternoon/i.test(fullText)) period = 'asr_maghrib';
+      else if (/مغرب|maghrib|sunset/i.test(fullText)) period = 'maghrib_isha';
+      else if (/عشاء|عشا|ليل|isha|night|evening/i.test(fullText)) period = 'isha_fajr';
+
+      // 5. أهم 3 مهام (MIT)
+      let mit = null;
+      const mitMatch = fullText.match(/(?:mit|top\s*3|أهم\s*(?:3|ثلاث)?\s*مهام)[:\s]+([^|;\n\r]+)/i);
+      if (mitMatch) mit = mitMatch[1].trim();
+
+      // 6. المصاريف المسجلة
+      let expList = [];
+      const expMatches = [...fullText.matchAll(/(?:exp|expense|spent|paid|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*([^|;\n\r]+)?/gi)];
+      for (const m of expMatches) {
+        const amt = parseFloat(m[1]);
+        const rawDesc = (m[2] || 'مصروف').trim();
+        let expCat = 'أخرى';
+        if (/مواصلات|uber|careem|taxi|bus|مترو|transport/i.test(rawDesc)) expCat = 'مواصلات';
+        else if (/أكل|طعام|غدا|فطار|عشا|food|lunch|dinner|breakfast|burger/i.test(rawDesc)) expCat = 'أكل';
+        else if (/تعليم|كتب|كورس|course|book/i.test(rawDesc)) expCat = 'تعليم';
+        else if (/رياضة|جيم|gym|creatine/i.test(rawDesc)) expCat = 'رياضة';
+        else if (/ترفيه|cinema|سينما|game/i.test(rawDesc)) expCat = 'ترفيه';
+        else if (/ملابس|clothes|shirt/i.test(rawDesc)) expCat = 'ملابس';
+        expList.push({ amt, cat: expCat, desc: rawDesc });
+      }
+
+      // 7. الدخل الإضافي
+      let incList = [];
+      const incMatches = [...fullText.matchAll(/(?:inc|income|earned|دخل|دخل إضافي)[:\s]+(\d+(?:\.\d+)?)(?:\s*([^|;\n\r]+))?/gi)];
+      for (const m of incMatches) {
+        const amt = parseFloat(m[1]);
+        const desc = (m[2] || 'دخل إضافي').trim();
+        incList.push({ amt, cat: 'دخل إضافي', desc: desc || 'دخل إضافي' });
+      }
+
+      // استخراج عنوان المهمة النظيف بدون حشو الأوامر
+      let cleanLabel = fullText.split('|')[0];
+      cleanLabel = cleanLabel.split(/\b(?:mit|exp|inc|مصروف|دخل)[:\s]/i)[0];
+      cleanLabel = cleanLabel.replace(/\b(today|tomorrow|النهاردة|النهارده|اليوم|بكره|بكرا|غدا|غداً)\b/gi, '');
+      cleanLabel = cleanLabel.replace(/(\d{4}[-/]\d{1,2}[-/]\d{1,2})|(\d{1,2})[-/](\d{1,2})|(\d{1,2})\s*(?:يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/gi, '');
+      cleanLabel = cleanLabel.replace(/(?:بريتي|بايورتي|برايورتي|priority|أولوية)\s*(?:بتاعتها\s*)?(?:5|4|3|2|1|p[1-5]|⭐⭐⭐⭐⭐|⭐⭐⭐⭐|⭐⭐⭐|⭐⭐|⭐)/gi, '');
+      cleanLabel = cleanLabel.replace(/(?:في\s+)?(?:كاتيجوري|كاتجري|قسم|category)\s*(?:كورسز|كورسات|courses|course|sport|study|work|date|personal|ديني|tasks)/gi, '');
+      cleanLabel = cleanLabel.replace(/(?:ما\s*بين|بين|من)?\s*(?:الصلوات\s*)?(?:من\s*)?(?:مثلا\s*)?(?:المغرب\s*(?:لـ|إلى|للعشاء|للعشا|والعشاء|والعشا)|الفجر\s*(?:لـ|إلى|للظهر|والظهر)|الظهر\s*(?:لـ|إلى|للعصر|والعصر)|العصر\s*(?:لـ|إلى|للمغرب|والمغرب)|العشاء\s*(?:لـ|إلى|للفجر|والفجر)|فترة\s*[\w\u0600-\u06FF]+)/gi, '');
+      cleanLabel = cleanLabel.replace(/\b(زود|ضيف|اعمل|حط|سجل|وعامل\s*ايه|واعمل|وخليه|وخليها|ويحط|يحطها|add|create|put|set)\b/gi, '');
+      cleanLabel = cleanLabel.replace(/\b(عنوان\s+التاسك|اسم\s+التاسك|تاسك|task|مهمة|مهمه)\b/gi, '');
+      cleanLabel = cleanLabel.replace(/\b(بتاعتها|بتاعها|الميعاد|ميعاد|والميعاد|بتاع|بتاعه|بتاعت|كذا|اقول\s*له|مثلا|مثلاً)\b/gi, '');
+      cleanLabel = cleanLabel.replace(/^\s*(?:في|on|at|for)\s+/gi, '');
+      cleanLabel = cleanLabel.replace(/\s+/g, ' ').trim(' :-,|');
+
+      if (!cleanLabel) cleanLabel = fullText.split('|')[0].trim();
+
+      return { dayIdx, cleanLabel, priority, cat, period, mit, expList, incList };
+    }
+
+    // إدارة نافذة أمر Spark والتعرف الصوتي الذكي
+    let sparkRecognition = null;
+    let isSparkListening = false;
+    let userStoppedVoice = false;
+    let sparkVoiceLang = 'ar-EG';
+    let finalizedChunks = [];
+    let currentInterim = '';
+
+    function setSparkVoiceLang(lang) {
+      sparkVoiceLang = lang;
+      const btnAr = document.getElementById('btn-voice-lang-ar');
+      const btnEn = document.getElementById('btn-voice-lang-en');
+      if (btnAr && btnEn) {
+        if (lang === 'ar-EG') {
+          btnAr.style.background = 'var(--gold)';
+          btnAr.style.color = '#0a0a0a';
+          btnEn.style.background = 'transparent';
+          btnEn.style.color = 'var(--text2)';
+        } else {
+          btnEn.style.background = 'var(--gold)';
+          btnEn.style.color = '#0a0a0a';
+          btnAr.style.background = 'transparent';
+          btnAr.style.color = 'var(--text2)';
+        }
+      }
+      if (isSparkListening) {
+        stopSparkVoice();
+        setTimeout(toggleSparkVoice, 200);
+      }
+    }
+
     function promptSparkCommand() {
       stopSparkVoice();
+      finalizedChunks = [];
+      currentInterim = '';
       const modal = document.getElementById('spark-ai-modal');
       const inputEl = document.getElementById('spark-cmd-input');
-      accumulatedVoiceText = '';
-      if (inputEl) inputEl.value = ''; // فارغة تماماً ليملاها المستخدم بنفسه
+      if (inputEl) inputEl.value = '';
       if (modal) {
         modal.style.display = 'flex';
         setTimeout(() => { if (inputEl) inputEl.focus(); }, 100);
       }
+    }
+
+    function clearSparkInput() {
+      finalizedChunks = [];
+      currentInterim = '';
+      const inputEl = document.getElementById('spark-cmd-input');
+      if (inputEl) inputEl.value = '';
     }
 
     function closeSparkModal() {
@@ -2870,11 +3117,16 @@
       if (modal) modal.style.display = 'none';
     }
 
-    // التعرف الصوتي المستمر ثنائي اللغة (عربي وإنجليزي ومكس) بدون إغلاق تلقائي
-    let sparkRecognition = null;
-    let isSparkListening = false;
-    let userStoppedVoice = false;
-    let accumulatedVoiceText = '';
+    function updateSparkModalInput() {
+      const inputEl = document.getElementById('spark-cmd-input');
+      if (!inputEl) return;
+      let text = (finalizedChunks.join(' ') + ' ' + currentInterim).trim();
+      text = removeVoiceDuplicates(text);
+      if (sparkVoiceLang === 'ar-EG') {
+        text = convertPhoneticToEnglish(text);
+      }
+      inputEl.value = text;
+    }
 
     function stopSparkVoice() {
       isSparkListening = false;
@@ -2922,7 +3174,11 @@
 
       userStoppedVoice = false;
       isSparkListening = true;
-      accumulatedVoiceText = inputEl ? inputEl.value.trim() : '';
+
+      // حفظ ما هو موجود حالياً في الحقل كنقطة بداية
+      if (inputEl && inputEl.value.trim() && finalizedChunks.length === 0) {
+        finalizedChunks = [inputEl.value.trim()];
+      }
 
       function initAndStartRecognition() {
         if (!isSparkListening || userStoppedVoice) return;
@@ -2939,8 +3195,7 @@
           sparkRecognition = new SpeechRecognition();
           sparkRecognition.continuous = true;
           sparkRecognition.interimResults = true;
-          // اللهجة المصرية تدعم بامتياز خلط الكلمات العربية والإنجليزية (Code-switching)
-          sparkRecognition.lang = 'ar-EG';
+          sparkRecognition.lang = sparkVoiceLang;
 
           sparkRecognition.onstart = () => {
             if (micBtn) {
@@ -2951,23 +3206,29 @@
             if (micIcon) micIcon.textContent = '⏹️';
             if (micTxt) micTxt.textContent = 'إنهاء التسجيل الصوتي';
             if (statusBox) statusBox.style.display = 'flex';
-            if (statusTxt) statusTxt.textContent = 'جاري الاستماع المستمر... تحدث براحتك وعند الانتهاء اضغط إنهاء';
+            if (statusTxt) {
+              statusTxt.textContent = sparkVoiceLang === 'ar-EG'
+                ? 'جاري الاستماع (عربي ومكس)... تحدث براحتك واضغط إنهاء عند اكتمال الكلام'
+                : 'Listening in English... Speak freely and tap Finish when done';
+            }
           };
 
           sparkRecognition.onresult = (event) => {
-            let sessionFinal = '';
-            let sessionInterim = '';
-            for (let i = 0; i < event.results.length; i++) {
+            currentInterim = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const trans = event.results[i][0].transcript.trim();
               if (event.results[i].isFinal) {
-                sessionFinal += event.results[i][0].transcript + ' ';
+                if (trans) {
+                  const last = finalizedChunks[finalizedChunks.length - 1];
+                  if (!last || last.toLowerCase() !== trans.toLowerCase()) {
+                    finalizedChunks.push(trans);
+                  }
+                }
               } else {
-                sessionInterim += event.results[i][0].transcript;
+                currentInterim += ' ' + trans;
               }
             }
-            if (inputEl) {
-              const full = (accumulatedVoiceText + ' ' + sessionFinal + ' ' + sessionInterim).replace(/\s+/g, ' ').trim();
-              inputEl.value = full;
-            }
+            updateSparkModalInput();
           };
 
           sparkRecognition.onerror = (event) => {
@@ -2979,20 +3240,16 @@
               alert("⚠️ لم يتم العثور على ميكروفون صالح للتسجيل.");
               stopSparkVoice();
             }
-            // الأخطاء الأخرى مثل no-speech لا توقف المايك تلقائياً بل يستمر الاستماع
           };
 
           sparkRecognition.onend = () => {
             if (isSparkListening && !userStoppedVoice) {
-              // إذا أنهى المتصفح الجلسة بسبب صمت مؤقت، نحتفظ بالنص ونعيد تشغيل الاستماع فوراً حتى يوقفه المستخدم بنفسه
-              if (inputEl) {
-                accumulatedVoiceText = inputEl.value.trim();
-              }
+              currentInterim = '';
               setTimeout(() => {
                 if (isSparkListening && !userStoppedVoice) {
                   initAndStartRecognition();
                 }
-              }, 100);
+              }, 300);
             } else {
               stopSparkVoice();
             }
@@ -3002,7 +3259,7 @@
         } catch (err) {
           console.error("Speech start error:", err);
           if (isSparkListening && !userStoppedVoice) {
-            setTimeout(initAndStartRecognition, 250);
+            setTimeout(initAndStartRecognition, 400);
           }
         }
       }

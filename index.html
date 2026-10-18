@@ -3020,33 +3020,42 @@
         }
       }
 
-      // 8. التحديد الذكي: هل الأمر يحتوي على مهمة task أم هو أمر مالي بحت (مصاريف / دخل)؟
-      const hasFinancial = expList.length > 0 || incList.length > 0;
-      const hasExplicitTask = /\b(تاسك|task|مهمة|مهمه|انترفيو|interview|meeting|ميتنج|اجتماع|مشوار|مذاكرة|study|workout|تمرينة|تمرين|جيم)\b/i.test(fullText);
-      const hasPeriod = period !== null;
+      // 8. التحديد الذكي الصارم: هل الأمر مالي؟ (المصاريف والدخل متتحطش في المهام نهائياً)
+      const hasFinancial = expList.length > 0 || incList.length > 0 || /\b(مصاريف|المصاريف|الصماريف|مصروف|صرفت|صرف|دفعت|دفع|اشتريت|شريت|دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|داخل\s+إضافي|دخل|الدخل|exp|expense|spent|paid|inc|income)\b/i.test(fullText);
 
-      let hasTask = true;
-      if (hasFinancial && !hasExplicitTask && !hasPeriod && !hasExplicitPriority) {
-        let residual = fullText;
-        residual = residual.replace(/(?:اعمل\s+(?:حاجه|حاجة)\s+في\s+المصاريف|سجل\s+(?:في\s+)?المصاريف|حط\s+(?:في\s+)?المصاريف|ضيف\s+(?:في\s+)?المصاريف|في\s+المصاريف|مصاريف|مصروف|صرفت|دفعت|اشتريت|شريت|exp|expense|spent|paid).*?(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi, '');
-        residual = residual.replace(/(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+المصاريف|مصاريف|مصروف)/gi, '');
-        residual = residual.replace(/(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|داخل\s+إضافي|سجل\s+(?:في\s+)?الدخل|في\s+الدخل|دخل|الدخل|قبضت|قبض|جالي|إيراد|أرباح|مكسب|inc|income|earned).*?(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi, '');
-        residual = residual.replace(/(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|دخل)/gi, '');
-
-        // حذف كل الكلمات والأفعال الطلبية والمالية العامة
-        residual = residual.replace(/\b(دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|داخل\s+إضافي|دخل|الدخل|إيراد|أرباح|مكسب|المصاريف|الصماريف|مصاريف|مصروف)\b/gi, '');
-        residual = residual.replace(/\b(زود\s+لي|زودلي|زود|ضيف\s+لي|ضيفلي|ضيف|حط\s+لي|حطلي|حط|سجل\s+لي|سجلي|سجل|اعمل\s+لي|اعملي|اعمل|اكتب\s+لي|اكتبلي|اكتب|قولتله|اقول\s*له|عايز|عاوز|اريد|ممكن|لو\s*سمحت|يا|لي|add|put|record|create)\b/gi, '');
-        residual = residual.replace(/\b(فلوس|كاش|جنيه|جنية|ج|egp|le)\b/gi, '');
-        residual = residual.replace(/\b(today|tomorrow|النهاردة|النهارده|اليوم|بكره|بكرا|غدا|غداً|في|على|من|و|مع|بـ|ب)\b/gi, '');
-        residual = residual.trim().replace(/^[\s:,.\-|]+|[\s:,.\-|]+$/g, '');
-
-        const allExpDesc = [...expList, ...incList].map(e => e.desc).join(' ');
-        const resWords = residual.split(/\s+/).filter(w => w && !allExpDesc.includes(w));
-        if (resWords.length === 0 || resWords.join(' ').length < 3) {
-          hasTask = false;
+      // فحص هل هناك طلب صريح ومنفصل لمهمة حقيقية (مثل: انترفيو / اجتماع / ميتنج)
+      let hasExplicitTask = false;
+      if (/\b(تاسك|task|مهمة|مهمه|انترفيو|interview|meeting|ميتنج|اجتماع|مشوار|مذاكرة|study|exam|امتحان)\b/i.test(fullText)) {
+        // استبعاد إذا كانت الكلمة تابعة للمصاريف مثل "تاسك المصاريف" أو "اعمل مهمة في المصاريف"
+        if (!/\b(?:تاسك|مهمة|مهمه)\s+(?:في\s+)?(?:المصاريف|الصماريف|الدخل|المصروف)\b/i.test(fullText)) {
+          hasExplicitTask = true;
         }
       }
 
+      // شبكة أمان: إذا كان الأمر مالياً ولكن لم يتم استخراج المبلغ بعد (مثلاً: صرفت 40 مواصلات)
+      if (hasFinancial && expList.length === 0 && incList.length === 0) {
+        const anyNumMatch = fullText.match(/(\d+(?:\.\d+)?)/);
+        if (anyNumMatch) {
+          const amt = parseFloat(anyNumMatch[1]);
+          if (/\b(?:دخل\s+إضافي|دخل\s+اضافي|داخل\s+اضافي|داخل\s+إضافي|دخل|الدخل|قبضت|إيراد|أرباح)\b/i.test(fullText)) {
+            incList.push({ amt, cat: 'دخل إضافي', desc: 'دخل إضافي' });
+          } else {
+            let cat = categorizeExpense(fullText);
+            expList.push({ amt, cat, desc: cat !== 'أخرى' ? cat : 'مصروف' });
+          }
+        }
+      }
+
+      // قاعدة قطعية حاسمة: أي أمر فيه مصاريف أو دخل لا يُنشئ أي مهمة على الإطلاق
+      let hasTask = false;
+      if (!hasFinancial) {
+        hasTask = true;
+      } else if (hasExplicitTask) {
+        // إذا كان أمراً مركباً صريحاً يحتوي على مهمة ومصروف معاً
+        hasTask = true;
+      } else {
+        hasTask = false;
+      }
       // تنظيف عنوان المهمة النظيف بدون حشو الأوامر
       let cleanLabel = fullText.split('|')[0];
       cleanLabel = cleanLabel.split(/\b(?:mit|exp|inc|مصروف|دخل)[:\s]/i)[0];
@@ -3287,8 +3296,8 @@
       const targetTasks = getDayTasksList(targetDayIdx);
       if (!S.tasks[targetDayIdx]) S.tasks[targetDayIdx] = {};
 
-      // إضافة المهمة فقط إذا كان الأمر يحتوي على مهمة وليس أمراً مالياً بحتاً
-      if (p.hasTask) {
+      // قاعدة صارمة: إذا كان الأمر مالياً، لا يتم إنشاء مهمة أبداً
+      if (p.hasTask && (!p.expList || p.expList.length === 0) && (!p.incList || p.incList.length === 0) || (p.hasTask && /\b(انترفيو|interview|meeting|ميتنج|اجتماع|امتحان)\b/i.test(cmd))) {
         const newId = 't_sp_' + Date.now();
         targetTasks.push({
           id: newId,
@@ -3331,7 +3340,9 @@
       const dateStr = d.getDate() + " " + AR_M[d.getMonth()] + " " + d.getFullYear();
 
       // رسالة تأكيد مخصصة وواضحة حسب نوع العملية
-      if (!p.hasTask && p.expList.length > 0 && p.incList.length === 0) {
+      if (!p.hasTask && p.expList.length === 0 && p.incList.length === 0) {
+        alert("💡 تم استقبال الأمر المالي، ولكن يرجى ذكر المبلغ (مثلاً: 50 جنيه مواصلات أو دخل 250 جنيه).\n\n✅ تأكيد: لم يتم إنشاء أي مهمة.");
+      } else if (!p.hasTask && p.expList.length > 0 && p.incList.length === 0) {
         const expStr = p.expList.map(x => x.amt + ' ج (' + x.desc + ')').join(', ');
         alert("💸 تم تسجيل المصروف بنجاح!\n\n📅 اليوم: " + dateStr + "\n💸 المصروف: " + expStr + "\n💰 تم الخصم وتحديث المتبقي الصافي في شاشة اليوم (ولم يتم إنشاء أي مهمة).");
       } else if (!p.hasTask && p.incList.length > 0 && p.expList.length === 0) {
@@ -3509,23 +3520,31 @@
     function loadDay(idx) {
       S.cur = idx;
 
-      // تصحيح ذاتي فوري إذا كان هناك مهمة أو مصروف مسجلان خطأً من أمر دخل إضافي
+      // تنظيف تلقائي فوري لأي مهمة تحتوي على مصاريف أو دخل سجلت بالخطأ (المصاريف متتحطش في المهام أبداً)
       if (S.dayTasks && S.dayTasks[idx]) {
-        const wrongTaskIdx = S.dayTasks[idx].findIndex(t => /زود.*(?:المصاريف|الصماريف).*دخل.*اضافي/i.test(t.label) || /زود.*(?:المصاريف|الصماريف).*داخل.*اضافي/i.test(t.label) || /داخل\s*اضافي/i.test(t.label));
-        if (wrongTaskIdx !== -1) {
-          const removed = S.dayTasks[idx].splice(wrongTaskIdx, 1)[0];
-          if (removed && S.tasks && S.tasks[idx]) delete S.tasks[idx][removed.id];
-          if (S.exp && S.exp[idx]) {
-            const wrongExpIdx = S.exp[idx].findIndex(e => /دخل.*اضافي|داخل.*اضافي/i.test(e.desc));
-            if (wrongExpIdx !== -1) {
-              const wrongExp = S.exp[idx].splice(wrongExpIdx, 1)[0];
-              if (!S.extraInc) S.extraInc = {};
-              if (!S.extraInc[idx]) S.extraInc[idx] = [];
-              S.extraInc[idx].push({ id: Date.now() + Math.random(), desc: 'دخل إضافي', amt: wrongExp.amt, cat: 'دخل إضافي' });
-            }
+        let changed = false;
+        S.dayTasks[idx] = S.dayTasks[idx].filter(t => {
+          const isFinancial = /\b(?:المصاريف|الصماريف|مصاريف|مصروف|صرفت|دخل\s*اضافي|داخل\s*اضافي|دخل\s*إضافي|داخل\s*إضافي)\b/i.test(t.label);
+          if (isFinancial) {
+            changed = true;
+            if (S.tasks && S.tasks[idx]) delete S.tasks[idx][t.id];
+            return false;
           }
-          syncToCloud();
+          return true;
+        });
+
+        // تصحيح أي مصروف كان في الأصل دخلاً إضافياً
+        if (S.exp && S.exp[idx]) {
+          const wrongExpIdx = S.exp[idx].findIndex(e => /دخل.*اضافي|داخل.*اضافي|دخل.*إضافي|داخل.*إضافي/i.test(e.desc));
+          if (wrongExpIdx !== -1) {
+            const wrongExp = S.exp[idx].splice(wrongExpIdx, 1)[0];
+            if (!S.extraInc) S.extraInc = {};
+            if (!S.extraInc[idx]) S.extraInc[idx] = [];
+            S.extraInc[idx].push({ id: Date.now() + Math.random(), desc: 'دخل إضافي', amt: wrongExp.amt, cat: 'دخل إضافي' });
+            changed = true;
+          }
         }
+        if (changed) syncToCloud();
       }
       const daySel = document.getElementById('day-select');
       if (daySel) daySel.value = idx;

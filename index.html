@@ -2157,6 +2157,7 @@
         </div>
       </div>
       <div class="tb-right">
+        <button class="btn" id="btn-sync-spark" onclick="syncWithSparkTasks()" style="padding:4px 9px; font-size:11px; border-radius:4px; font-weight:700; background:rgba(0,255,136,0.15); color:#00ff88; border:1px solid #00ff88;" title="مزامنة فورية مع مهام Spark">⚡ مزامنة مع Spark</button>
         <button class="btn btn-gold" id="btn-emergency-recover" onclick="emergencyRecoverData()" style="padding:4px 9px; font-size:11px; border-radius:4px; font-weight:700;" title="فحص واسترجاع بيانات الأيام السابقة من ذاكرة المتصفح">📥 فحص واسترجاع البيانات</button>
         <div class="cloud-indicator" id="sync-status" title="حالة الاتصال">
           <span class="pulse-dot"></span>
@@ -2673,10 +2674,16 @@
       alert(`💾 تم حفظ الـ (${S.globalCourses.length}) كورس الحالية كنسخة احتياطية دائمة بنجاح!`);
     }
 
-    // دالة تسجيل الدخول بحساب جوجل مع دعم Fallback
+    // دالة تسجيل الدخول بحساب جوجل مع دعم Fallback وطلب إذن مهام Spark
     function loginWithGoogle() {
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).catch(err => {
+      provider.addScope('https://www.googleapis.com/auth/tasks');
+      auth.signInWithPopup(provider).then(res => {
+        if (res.credential && res.credential.accessToken) {
+          localStorage.setItem('dsrpt_g_token', res.credential.accessToken);
+          setTimeout(syncWithSparkTasks, 500);
+        }
+      }).catch(err => {
         if (err.code === 'auth/popup-blocked') {
           auth.signInWithRedirect(provider);
         } else {
@@ -2684,6 +2691,89 @@
           console.error(err);
         }
       });
+    }
+
+    // استلام التوكن في حالة Redirect
+    auth.getRedirectResult().then(res => {
+      if (res && res.credential && res.credential.accessToken) {
+        localStorage.setItem('dsrpt_g_token', res.credential.accessToken);
+        setTimeout(syncWithSparkTasks, 500);
+      }
+    }).catch(() => {});
+
+    // مزامنة مهام Spark (Google Tasks) مع DSRPT Tasks
+    async function syncWithSparkTasks() {
+      const token = localStorage.getItem('dsrpt_g_token');
+      const btn = document.getElementById('btn-sync-spark');
+      if (btn) btn.innerHTML = '⏳ جاري المزامنة...';
+
+      if (!token) {
+        if (btn) btn.innerHTML = '⚡ مزامنة مع Spark';
+        const ok = confirm("لربط مهامك مع Spark، يتطلب التطبيق إذن مزامنة Google Tasks. هل تريد تسجيل الدخول بحسابك لتفعيل الربط؟");
+        if (ok) loginWithGoogle();
+        return;
+      }
+
+      try {
+        const res = await fetch('https://tasks.googleapis.com/tasks/v1/lists/@default/tasks?showCompleted=true&maxResults=50', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            localStorage.removeItem('dsrpt_g_token');
+            if (btn) btn.innerHTML = '⚡ مزامنة مع Spark';
+            const ok = confirm("انتهت صلاحية جلسة جوجل. هل تريد إعادة تسجيل الدخول لتجديد مزامنة مهام Spark؟");
+            if (ok) loginWithGoogle();
+            return;
+          }
+          throw new Error('Google Tasks API error: ' + res.status);
+        }
+
+        const data = await res.json();
+        const items = data.items || [];
+        const todayIdx = ti();
+        const currentTasks = getDayTasksList(todayIdx);
+        if (!S.tasks[todayIdx]) S.tasks[todayIdx] = {};
+
+        let newCount = 0;
+        items.forEach(gt => {
+          if (!gt.title || !gt.title.trim()) return;
+          const cleanTitle = gt.title.trim();
+          const exists = currentTasks.find(t => t.id === gt.id || t.label.trim() === cleanTitle);
+          const isDone = gt.status === 'completed';
+
+          if (!exists) {
+            currentTasks.push({
+              id: gt.id,
+              label: cleanTitle,
+              cat: 'Tasks',
+              priority: '⭐⭐⭐',
+              period: null,
+              fromSpark: true
+            });
+            if (isDone) S.tasks[todayIdx][gt.id] = true;
+            newCount++;
+          } else {
+            if (isDone && !S.tasks[todayIdx][exists.id]) {
+              S.tasks[todayIdx][exists.id] = true;
+            }
+          }
+        });
+
+        renderTasks(S.cur);
+        syncToCloud();
+
+        if (btn) btn.innerHTML = '✅ متزامن مع Spark';
+        setTimeout(() => { if (btn) btn.innerHTML = '⚡ مزامنة مع Spark'; }, 3000);
+
+        if (newCount > 0) {
+          alert(`✅ تم سحب (${newCount}) مهام جديدة أضفتها عبر Spark بنجاح!`);
+        }
+      } catch (err) {
+        console.error("Spark sync error:", err);
+        if (btn) btn.innerHTML = '⚡ مزامنة مع Spark';
+      }
     }
 
     // دالة تسجيل الخروج
@@ -3286,8 +3376,22 @@
     function toggleTask(idx, tid) {
       if (!S.tasks[idx]) S.tasks[idx] = {};
       S.tasks[idx][tid] = !S.tasks[idx][tid];
+      const isDone = S.tasks[idx][tid];
       renderTasks(idx);
       syncToCloud();
+
+      // تحديث حالة المهمة في جوجل تلقائياً لو كانت المهمة متزامنة مع Spark
+      const token = localStorage.getItem('dsrpt_g_token');
+      if (token && tid && !tid.startsWith('t_')) {
+        fetch(`https://tasks.googleapis.com/tasks/v1/lists/@default/tasks/${tid}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: isDone ? 'completed' : 'needsAction' })
+        }).catch(() => {});
+      }
     }
 
     function editTaskLabel(idx, i, newVal) {
@@ -4071,6 +4175,9 @@
       loadDay(ti());
       updateSidebar();
       renderGlobalCourses();
+      if (localStorage.getItem('dsrpt_g_token')) {
+        setTimeout(syncWithSparkTasks, 1000);
+      }
     };
   </script>
 

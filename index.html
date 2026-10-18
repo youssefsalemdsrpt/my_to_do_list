@@ -2798,12 +2798,20 @@
     }
     const MONTHS_LIST = getMonthsList();
 
+    function getInitialMonthIndex() {
+      const now = new Date();
+      const idx = MONTHS_LIST.findIndex(mo => mo.y === now.getFullYear() && mo.m === now.getMonth());
+      return idx !== -1 ? idx : 0;
+    }
+    const initialMonthOff = getInitialMonthIndex();
+
     function buildMonthTabs(containerId, onClickName) {
       const el = document.getElementById(containerId);
       if (!el) return;
       el.innerHTML = MONTHS_LIST.map((mo, i) =>
-        `<button class="month-sel-btn ${i === 0 ? 'active' : ''}" onclick="${onClickName}(${i})">${AR_M[mo.m]} ${mo.y}</button>`
+        `<button class="month-sel-btn ${i === initialMonthOff ? 'active' : ''}" onclick="${onClickName}(${i})">${AR_M[mo.m]} ${mo.y}</button>`
       ).join('');
+      setTimeout(() => scrollTabIntoView(containerId, initialMonthOff), 60);
     }
 
     function getDayTasksList(idx) {
@@ -3561,6 +3569,11 @@
 
     // حساب تفاصيل الدخل الثلاثة بشكل منفصل ومستقل تماماً
     function getDayIncomeDetails(idx) {
+      if (!S.rolloverFrom) S.rolloverFrom = {};
+      if (S.rolloverFrom[idx] === undefined && idx > 0 && S.saved && S.saved[idx - 1]) {
+        const prevRemain = calcDayRemain(idx - 1);
+        if (prevRemain > 0) S.rolloverFrom[idx] = prevRemain;
+      }
       const rollover = (S.rolloverFrom && S.rolloverFrom[idx] !== undefined) ? (parseFloat(S.rolloverFrom[idx]) || 0) : 0;
       const baseInc = (S.baseInc && S.baseInc[idx] !== undefined) ? (parseFloat(S.baseInc[idx]) || 0) : 0;
       const extraList = (S.extraInc && S.extraInc[idx]) ? S.extraInc[idx] : [];
@@ -3692,7 +3705,7 @@
       `).join('');
     }
 
-    let calOff = 0;
+    let calOff = initialMonthOff;
     function showCalMonth(o) {
       calOff = o;
       document.querySelectorAll('#cal-tabs .month-sel-btn').forEach((b, i) => b.classList.toggle('active', i === o));
@@ -3753,7 +3766,7 @@
       }
     }
 
-    let statsOff = 0;
+    let statsOff = initialMonthOff;
     function showStatsMonth(o) {
       statsOff = o;
       document.querySelectorAll('#stats-tabs .month-sel-btn').forEach((b, i) => b.classList.toggle('active', i === o));
@@ -3834,8 +3847,49 @@
       const firstDayIdx = di(new Date(y, m, 1));
       const monthStartRollover = (firstDayIdx >= 0 && S.rolloverFrom && S.rolloverFrom[firstDayIdx]) ? (parseFloat(S.rolloverFrom[firstDayIdx]) || 0) : 0;
 
-      // صافي الرصيد الحقيقي = (رصيد أول الشهر + الدخل الجديد الفعلي) - المصاريف
-      const net = (monthStartRollover + totalRealInc) - totalExp;
+      // تحديد آخر يوم في الشهر المعروض لربط صافي الرصيد به مباشرة
+      let latestDayIdx = -1;
+      const isCurrentMonth = (today.getFullYear() === y && today.getMonth() === m);
+
+      if (isCurrentMonth) {
+        // في الشهر الحالي، نبدأ من اليوم الحالي ti() أو آخر يوم مسجل به بيانات
+        latestDayIdx = ti();
+        for (let d = daysInMonth; d > today.getDate(); d--) {
+          const testIdx = di(new Date(y, m, d));
+          if (testIdx < NUM_DAYS && (
+            (S.baseInc && S.baseInc[testIdx]) ||
+            (S.rolloverFrom && S.rolloverFrom[testIdx]) ||
+            (S.extraInc && S.extraInc[testIdx] && S.extraInc[testIdx].length) ||
+            (S.exp && S.exp[testIdx] && S.exp[testIdx].length) ||
+            (S.saved && S.saved[testIdx])
+          )) {
+            latestDayIdx = testIdx;
+            break;
+          }
+        }
+      } else if (new Date(y, m, 1) < today) {
+        // في الشهور السابقة، نحدد آخر يوم مسجل به نشاط في الشهر أو نهاية الشهر
+        latestDayIdx = di(new Date(y, m, daysInMonth));
+        for (let d = daysInMonth; d >= 1; d--) {
+          const testIdx = di(new Date(y, m, d));
+          if (testIdx < NUM_DAYS && (
+            (S.baseInc && S.baseInc[testIdx]) ||
+            (S.rolloverFrom && S.rolloverFrom[testIdx]) ||
+            (S.extraInc && S.extraInc[testIdx] && S.extraInc[testIdx].length) ||
+            (S.exp && S.exp[testIdx] && S.exp[testIdx].length) ||
+            (S.saved && S.saved[testIdx])
+          )) {
+            latestDayIdx = testIdx;
+            break;
+          }
+        }
+      } else {
+        // في الشهور المستقبلية
+        latestDayIdx = di(new Date(y, m, 1));
+      }
+
+      // صافي الرصيد = كل المبلغ المتبقي الموجود في تاريخ آخر يوم (مرحل من الأمس + دخل اليوم + دخل إضافي - المصاريف)
+      const net = calcDayRemain(latestDayIdx);
       const totalInc = totalRealInc + monthStartRollover;
       const avgDaily = daysWithExp > 0 ? Math.round(totalExp / daysWithExp) : 0;
       const expPercentOfInc = totalInc > 0 ? Math.min(100, Math.round((totalExp / totalInc) * 100)) : 0;

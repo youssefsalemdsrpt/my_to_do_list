@@ -2468,7 +2468,7 @@
           </button>
 
           <!-- زر المسح -->
-          <button type="button" onclick="document.getElementById('spark-cmd-input').value=''" style="padding:10px 14px; border-radius:6px; border:1px solid var(--border); background:#1a1a1a; color:var(--text2); font-family:'Cairo', sans-serif; font-size:12px; font-weight:700; cursor:pointer;">
+          <button type="button" onclick="document.getElementById('spark-cmd-input').value=''; accumulatedVoiceText='';" style="padding:10px 14px; border-radius:6px; border:1px solid var(--border); background:#1a1a1a; color:var(--text2); font-family:'Cairo', sans-serif; font-size:12px; font-weight:700; cursor:pointer;">
             مسح
           </button>
         </div>
@@ -2851,10 +2851,12 @@
       return { dayIdx, cleanLabel, priority, cat, period, mit, expList, incList };
     }
 
-    // فتح نافذة أمر Spark (فارغة تماماً ومجهزة للمايك أو الكتابة)
+        // فتح نافذة أمر Spark (فارغة تماماً ومجهزة للمايك أو الكتابة)
     function promptSparkCommand() {
+      stopSparkVoice();
       const modal = document.getElementById('spark-ai-modal');
       const inputEl = document.getElementById('spark-cmd-input');
+      accumulatedVoiceText = '';
       if (inputEl) inputEl.value = ''; // فارغة تماماً ليملاها المستخدم بنفسه
       if (modal) {
         modal.style.display = 'flex';
@@ -2864,17 +2866,47 @@
 
     function closeSparkModal() {
       const modal = document.getElementById('spark-ai-modal');
-      if (isSparkListening && sparkRecognition) {
-        try { sparkRecognition.stop(); } catch(e){}
-      }
+      stopSparkVoice();
       if (modal) modal.style.display = 'none';
     }
 
-    // التعرف الصوتي ثنائي اللغة (عربي وإنجليزي ومكس) عبر المايك
+    // التعرف الصوتي المستمر ثنائي اللغة (عربي وإنجليزي ومكس) بدون إغلاق تلقائي
     let sparkRecognition = null;
     let isSparkListening = false;
+    let userStoppedVoice = false;
+    let accumulatedVoiceText = '';
+
+    function stopSparkVoice() {
+      isSparkListening = false;
+      userStoppedVoice = true;
+      if (sparkRecognition) {
+        try {
+          sparkRecognition.onend = null;
+          sparkRecognition.onerror = null;
+          sparkRecognition.onresult = null;
+          sparkRecognition.stop();
+        } catch(e){}
+      }
+      const micBtn = document.getElementById('btn-spark-mic');
+      const micIcon = document.getElementById('spark-mic-icon');
+      const micTxt = document.getElementById('spark-mic-txt');
+      const statusBox = document.getElementById('spark-mic-status');
+      if (micBtn) {
+        micBtn.style.background = 'rgba(255,77,0,0.15)';
+        micBtn.style.borderColor = '#FF4D00';
+        micBtn.style.color = '#FF4D00';
+      }
+      if (micIcon) micIcon.textContent = '🎙️';
+      if (micTxt) micTxt.textContent = 'تحدث بالصوت (Voice)';
+      if (statusBox) statusBox.style.display = 'none';
+    }
 
     function toggleSparkVoice() {
+      if (isSparkListening) {
+        stopSparkVoice();
+        return;
+      }
+
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         alert("متصفحك لا يدعم خاصية التعرف الصوتي المباشر. يمكنك استخدام إملاء الصوت من كيبورد الهاتف أو استخدام متصفح Chrome أو Safari أو Edge.");
@@ -2888,65 +2920,99 @@
       const statusTxt = document.getElementById('spark-mic-status-txt');
       const inputEl = document.getElementById('spark-cmd-input');
 
-      if (isSparkListening) {
-        if (sparkRecognition) sparkRecognition.stop();
-        return;
+      userStoppedVoice = false;
+      isSparkListening = true;
+      accumulatedVoiceText = inputEl ? inputEl.value.trim() : '';
+
+      function initAndStartRecognition() {
+        if (!isSparkListening || userStoppedVoice) return;
+
+        try {
+          if (sparkRecognition) {
+            try {
+              sparkRecognition.onend = null;
+              sparkRecognition.onerror = null;
+              sparkRecognition.onresult = null;
+              sparkRecognition.abort();
+            } catch(e){}
+          }
+          sparkRecognition = new SpeechRecognition();
+          sparkRecognition.continuous = true;
+          sparkRecognition.interimResults = true;
+          // اللهجة المصرية تدعم بامتياز خلط الكلمات العربية والإنجليزية (Code-switching)
+          sparkRecognition.lang = 'ar-EG';
+
+          sparkRecognition.onstart = () => {
+            if (micBtn) {
+              micBtn.style.background = '#e02424';
+              micBtn.style.borderColor = '#e02424';
+              micBtn.style.color = '#fff';
+            }
+            if (micIcon) micIcon.textContent = '⏹️';
+            if (micTxt) micTxt.textContent = 'إنهاء التسجيل الصوتي';
+            if (statusBox) statusBox.style.display = 'flex';
+            if (statusTxt) statusTxt.textContent = 'جاري الاستماع المستمر... تحدث براحتك وعند الانتهاء اضغط إنهاء';
+          };
+
+          sparkRecognition.onresult = (event) => {
+            let sessionFinal = '';
+            let sessionInterim = '';
+            for (let i = 0; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                sessionFinal += event.results[i][0].transcript + ' ';
+              } else {
+                sessionInterim += event.results[i][0].transcript;
+              }
+            }
+            if (inputEl) {
+              const full = (accumulatedVoiceText + ' ' + sessionFinal + ' ' + sessionInterim).replace(/\s+/g, ' ').trim();
+              inputEl.value = full;
+            }
+          };
+
+          sparkRecognition.onerror = (event) => {
+            console.warn("Speech recognition error:", event.error);
+            if (event.error === 'not-allowed') {
+              alert("⚠️ يرجى السماح للتطبيق بالوصول إلى الميكروفون من إعدادات المتصفح.");
+              stopSparkVoice();
+            } else if (event.error === 'audio-capture') {
+              alert("⚠️ لم يتم العثور على ميكروفون صالح للتسجيل.");
+              stopSparkVoice();
+            }
+            // الأخطاء الأخرى مثل no-speech لا توقف المايك تلقائياً بل يستمر الاستماع
+          };
+
+          sparkRecognition.onend = () => {
+            if (isSparkListening && !userStoppedVoice) {
+              // إذا أنهى المتصفح الجلسة بسبب صمت مؤقت، نحتفظ بالنص ونعيد تشغيل الاستماع فوراً حتى يوقفه المستخدم بنفسه
+              if (inputEl) {
+                accumulatedVoiceText = inputEl.value.trim();
+              }
+              setTimeout(() => {
+                if (isSparkListening && !userStoppedVoice) {
+                  initAndStartRecognition();
+                }
+              }, 100);
+            } else {
+              stopSparkVoice();
+            }
+          };
+
+          sparkRecognition.start();
+        } catch (err) {
+          console.error("Speech start error:", err);
+          if (isSparkListening && !userStoppedVoice) {
+            setTimeout(initAndStartRecognition, 250);
+          }
+        }
       }
 
-      try {
-        sparkRecognition = new SpeechRecognition();
-        sparkRecognition.continuous = false;
-        sparkRecognition.interimResults = true;
-        // اللهجة المصرية تدعم بامتياز خلط الكلمات العربية والإنجليزية (Code-switching)
-        sparkRecognition.lang = 'ar-EG';
-
-        sparkRecognition.onstart = () => {
-          isSparkListening = true;
-          if (micBtn) {
-            micBtn.style.background = '#e02424';
-            micBtn.style.borderColor = '#e02424';
-            micBtn.style.color = '#fff';
-          }
-          if (micIcon) micIcon.textContent = '⏹️';
-          if (micTxt) micTxt.textContent = 'إيقاف التسجيل';
-          if (statusBox) statusBox.style.display = 'flex';
-          if (statusTxt) statusTxt.textContent = 'جاري الاستماع... تحدث الآن (عربي أو English)';
-        };
-
-        sparkRecognition.onresult = (event) => {
-          let transcript = '';
-          for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-          }
-          if (inputEl) inputEl.value = transcript;
-        };
-
-        sparkRecognition.onerror = (event) => {
-          console.warn("Speech recognition error:", event.error);
-          if (statusTxt) statusTxt.textContent = 'تنبيه المايك: ' + event.error;
-        };
-
-        sparkRecognition.onend = () => {
-          isSparkListening = false;
-          if (micBtn) {
-            micBtn.style.background = 'rgba(255,77,0,0.15)';
-            micBtn.style.borderColor = '#FF4D00';
-            micBtn.style.color = '#FF4D00';
-          }
-          if (micIcon) micIcon.textContent = '🎙️';
-          if (micTxt) micTxt.textContent = 'تحدث بالصوت (Voice)';
-          if (statusBox) statusBox.style.display = 'none';
-        };
-
-        sparkRecognition.start();
-      } catch (err) {
-        console.error("Speech error:", err);
-        alert("تعذر تشغيل المايك: " + err.message);
-      }
+      initAndStartRecognition();
     }
 
     // تنفيذ الأمر الصوتي/النصي من النافذة وتوزيعه في ثانية واحدة
     function executeSparkCommandFromModal() {
+      stopSparkVoice();
       const inputEl = document.getElementById('spark-cmd-input');
       const cmd = inputEl ? inputEl.value.trim() : '';
       if (!cmd) {

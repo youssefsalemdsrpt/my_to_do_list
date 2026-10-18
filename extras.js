@@ -11,7 +11,7 @@
 
   /* ---------- CSS ---------- */
   document.head.insertAdjacentHTML('beforeend', `<style>
-  html{-webkit-text-size-adjust:100%}body{touch-action:manipulation;overflow:visible!important}
+  html{-webkit-text-size-adjust:100%}body{touch-action:pan-y!important;overflow-x:hidden!important;-webkit-user-select:none!important;user-select:none!important;}
   #alerts .al{background:rgba(255,77,0,.1);border:1px solid rgba(255,77,0,.35);color:#ffb08a;border-radius:6px;padding:9px 14px;margin-bottom:8px;font-size:12px;font-weight:700}
   #toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #FF4D00;color:#F5F0EB;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:700;z-index:9999999;max-width:90%;display:none;text-align:center}
   #offline-bar{display:none;position:sticky;top:0;z-index:200;background:#f39c12;color:#0a0a0a;text-align:center;font-size:12px;font-weight:800;padding:6px}

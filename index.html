@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Youssef OS — Cloud Planner</title>
 <meta name="theme-color" content="#0a0a0a">
   <meta name="mobile-web-app-capable" content="yes">
@@ -1866,6 +1866,234 @@
       .extra-stats-grid { grid-template-columns: 1fr; }
     }
 
+  
+    /* --- تثبيت الشاشة وتجربة تطبيق أصيل (Native App Feel) --- */
+    html, body {
+      width: 100% !important;
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+      position: relative;
+      touch-action: pan-y !important;
+      -webkit-touch-callout: none !important;
+      -webkit-user-select: none !important;
+      user-select: none !important;
+      overscroll-behavior-y: none !important;
+    }
+    input, textarea, select {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      -webkit-touch-callout: default !important;
+    }
+    @media (max-width: 768px) {
+      input, textarea, select {
+        font-size: 16px !important; /* يمنع الزووم التلقائي في أجهزة iOS عند الضغط على الحقول */
+      }
+      .main {
+        margin-right: 0 !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+      }
+      .content {
+        padding: 12px 10px calc(80px + env(safe-area-inset-bottom)) !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+      }
+      .day-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 14px !important;
+      }
+      .tasks-card, .exp-card, .notes-card, .goals-card, .chart-box, .top-cat-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+      }
+    }
+
+    /* --- أزرار وتبويبات عرض المهام --- */
+    .tc-view-tabs {
+      display: flex;
+      gap: 3px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px;
+    }
+    .tc-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-family: 'Cairo', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tc-tab-btn.active {
+      background: var(--gold);
+      color: #0a0a0a;
+    }
+
+    /* شارات ربط المهام بفترات الصلاة (N8N / Power Pivot Style) */
+    .n8n-node-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .n8n-node-pill.unlinked {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px dashed var(--muted);
+      color: var(--muted);
+    }
+    .n8n-node-pill.unlinked:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .n8n-node-pill.linked {
+      background: rgba(255, 77, 0, 0.12);
+      border: 1px solid rgba(255, 77, 0, 0.4);
+      color: var(--gold);
+    }
+    .n8n-node-pill.linked:hover {
+      background: rgba(255, 77, 0, 0.22);
+    }
+
+    /* --- مخطط الصلاوات اليومي الواقعي (Realistic Prayer Timeline) --- */
+    .prayer-timeline-wrap {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .prayer-milestone {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 12px;
+      background: #161616;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    .prayer-node-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+      flex-shrink: 0;
+    }
+    .prayer-node-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .prayer-node-time {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--gold);
+      margin-right: auto;
+    }
+    .prayer-period-block {
+      margin-right: 12px;
+      padding: 10px 14px;
+      background: rgba(20, 20, 20, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      transition: all 0.2s;
+    }
+    .prayer-period-block.drag-over {
+      border-color: var(--gold) !important;
+      background: rgba(255, 77, 0, 0.1) !important;
+    }
+    .ppb-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 6px;
+    }
+    .ppb-name {
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ppb-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      background: #141414;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+    .ppb-tasks {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 38px;
+    }
+    .prayer-task-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 7px 10px;
+      cursor: grab;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .prayer-task-card:active {
+      cursor: grabbing;
+    }
+    .prayer-task-card:hover {
+      border-color: rgba(255, 77, 0, 0.4);
+    }
+    .prayer-task-card.done {
+      opacity: 0.5;
+    }
+    .prayer-task-card.done .pt-label {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+    .ppb-add-btn {
+      background: transparent;
+      border: 1px dashed var(--border2);
+      color: var(--muted);
+      font-family: 'Cairo', sans-serif;
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .ppb-add-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
   </style>
 
   <!-- Firebase SDKs -->
@@ -1956,10 +2184,17 @@
           <div>
             <div class="tasks-card">
               <div class="tc-header">
-                <span class="tc-title">✅ المهام اليومية</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span class="tc-title">✅ المهام اليومية</span>
+                  <div class="tc-view-tabs">
+                    <button type="button" class="tc-tab-btn active" id="btn-view-list" onclick="setTaskView('list')">📋 قائمة</button>
+                    <button type="button" class="tc-tab-btn" id="btn-view-prayer" onclick="setTaskView('prayer')">🕌 مخطط الصلاوات</button>
+                  </div>
+                </div>
                 <span class="tc-count" id="tasks-count">0/0</span>
               </div>
               <div class="tc-body" id="tasks-body"></div>
+              <div class="prayer-timeline-wrap" id="tasks-prayer-timeline" style="display:none;"></div>
               <div class="add-task-row">
                 <input class="add-task-input" id="new-task-input" placeholder="+ أضف مهمة جديدة من عندك..."
                   onkeydown="if(event.key==='Enter')addCustomTask()">
@@ -1984,12 +2219,25 @@
                   <option value="⭐⭐">⭐⭐ P4</option>
                   <option value="⭐">⭐ P5</option>
                 </select>
+
+                <!-- ربط بفترة الصلاة (N8N Style) -->
+                <select class="add-task-select" id="new-task-period" style="font-weight:600; color:var(--text2);">
+                  <option value="">⚡ بدون ربط بفترة صلاة</option>
+                  <option value="fajr_dhuhr">🌅 الفجر ➔ الظهر (~7 س)</option>
+                  <option value="dhuhr_asr">☀️ الظهر ➔ العصر (~3.5 س)</option>
+                  <option value="asr_maghrib">⛅ العصر ➔ المغرب (~2.5 س)</option>
+                  <option value="maghrib_isha">🌆 المغرب ➔ العشاء (~1.5 س)</option>
+                  <option value="isha_fajr">🌙 العشاء ➔ الفجر (ليلي)</option>
+                </select>
                 <button class="add-task-btn" onclick="addCustomTask()">+ إضافة</button>
               </div>
             </div>
 
             <div class="goals-card">
-              <div class="tc-header"><span class="tc-title">🎯 أهداف الأسبوع ده</span></div>
+              <div class="tc-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="tc-title" id="week-goals-title">🎯 أهداف الأسبوع</span>
+                <span class="tc-count" id="week-goals-count">0/0</span>
+              </div>
               <div class="goals-body" id="week-goals-body"></div>
               <div class="add-task-row">
                 <input class="add-task-input" id="new-goal-input" placeholder="+ أضف هدف للأسبوع ده..."
@@ -2558,7 +2806,7 @@
       S.cur = idx;
       const daySel = document.getElementById('day-select');
       if (daySel) daySel.value = idx;
-      const d = gd(idx), wk = Math.floor(idx / 7) + 1, isSaved = !!S.saved[idx];
+      const d = gd(idx), wk = getWeekNum(idx), isSaved = !!S.saved[idx];
 
       const headerEl = document.getElementById('day-header');
       if (headerEl) {
@@ -2617,6 +2865,221 @@
       }
     }
 
+    // تعريف فترات الصلاة بفرق الساعات الواقعي في مصر
+    const PRAYER_PERIODS = {
+      'fajr_dhuhr': { id: 'fajr_dhuhr', name: 'الفجر ➔ الظهر', icon: '🌅', hours: 7.0, time: '05:00 - 12:00', color: '#FF4D00', minHeight: 160, desc: 'الصباح ووقت العمل والإنتاجية' },
+      'dhuhr_asr': { id: 'dhuhr_asr', name: 'الظهر ➔ العصر', icon: '☀️', hours: 3.5, time: '12:00 - 15:30', color: '#f39c12', minHeight: 110, desc: 'منتصف النهار والمهام الحركية' },
+      'asr_maghrib': { id: 'asr_maghrib', name: 'العصر ➔ المغرب', icon: '⛅', hours: 2.5, time: '15:30 - 18:00', color: '#3498db', minHeight: 90, desc: 'أواخر النهار والمهام المركزة' },
+      'maghrib_isha': { id: 'maghrib_isha', name: 'المغرب ➔ العشاء', icon: '🌆', hours: 1.5, time: '18:00 - 19:30', color: '#9b59b6', minHeight: 75, desc: 'الغسق والتقييم السريع' },
+      'isha_fajr': { id: 'isha_fajr', name: 'العشاء ➔ الفجر', icon: '🌙', hours: 9.5, time: '19:30 - 05:00', color: '#00ff88', minHeight: 125, desc: 'المساء والليل، القراءة والنوم' }
+    };
+
+    let currentTaskView = 'list'; // 'list' أو 'prayer'
+
+    function setTaskView(view) {
+      currentTaskView = view;
+      const btnList = document.getElementById('btn-view-list');
+      const btnPrayer = document.getElementById('btn-view-prayer');
+      const bodyList = document.getElementById('tasks-body');
+      const bodyPrayer = document.getElementById('tasks-prayer-timeline');
+
+      if (btnList) btnList.classList.toggle('active', view === 'list');
+      if (btnPrayer) btnPrayer.classList.toggle('active', view === 'prayer');
+
+      if (view === 'list') {
+        if (bodyList) bodyList.style.display = 'block';
+        if (bodyPrayer) bodyPrayer.style.display = 'none';
+      } else {
+        if (bodyList) bodyList.style.display = 'none';
+        if (bodyPrayer) bodyPrayer.style.display = 'flex';
+        renderPrayerTimeline(S.cur);
+      }
+    }
+
+    // ربط أو فك ربط المهمة بفترة صلاة (N8N / Power Pivot Style)
+    function changeTaskPeriod(idx, tid, newPeriod) {
+      const currentList = getDayTasksList(idx);
+      const task = currentList.find(t => t.id === tid);
+      if (!task) return;
+      task.period = newPeriod || null;
+      renderTasks(idx);
+      syncToCloud();
+    }
+
+    function promptConnectTaskPeriod(idx, tid) {
+      const currentList = getDayTasksList(idx);
+      const task = currentList.find(t => t.id === tid);
+      if (!task) return;
+
+      const currentPeriodName = task.period && PRAYER_PERIODS[task.period] ? PRAYER_PERIODS[task.period].name : 'غير موصولة';
+      const choice = prompt(
+        `اختر فترة الصلاة لربط مهمة: "${task.label}"\n(الحالية: ${currentPeriodName})\n\n1: 🌅 الفجر ➔ الظهر (~7 ساعات)\n2: ☀️ الظهر ➔ العصر (~3.5 ساعات)\n3: ⛅ العصر ➔ المغرب (~2.5 ساعة)\n4: 🌆 المغرب ➔ العشاء (~1.5 ساعة)\n5: 🌙 العشاء ➔ الفجر (ليلي)\n0: إلغاء الربط بفترة`,
+        task.period ? '' : '1'
+      );
+
+      if (choice === null) return;
+      const mapChoice = {
+        '1': 'fajr_dhuhr',
+        '2': 'dhuhr_asr',
+        '3': 'asr_maghrib',
+        '4': 'maghrib_isha',
+        '5': 'isha_fajr',
+        '0': ''
+      };
+
+      const selected = mapChoice[choice.trim()];
+      if (selected !== undefined) {
+        changeTaskPeriod(idx, tid, selected);
+      }
+    }
+
+    // السحب والإفلات بين فترات الصلاة (Drag & Drop)
+    let draggedTaskId = null;
+    function onTaskDragStart(ev, tid) {
+      draggedTaskId = tid;
+      ev.dataTransfer.setData('text/plain', tid);
+      ev.dataTransfer.effectAllowed = 'move';
+    }
+    function onPrayerDragOver(ev) {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      ev.currentTarget.classList.add('drag-over');
+    }
+    function onPrayerDragLeave(ev) {
+      ev.currentTarget.classList.remove('drag-over');
+    }
+    function onPrayerDrop(ev, periodKey) {
+      ev.preventDefault();
+      ev.currentTarget.classList.remove('drag-over');
+      const tid = draggedTaskId || ev.dataTransfer.getData('text/plain');
+      if (tid) {
+        changeTaskPeriod(S.cur, tid, periodKey);
+      }
+      draggedTaskId = null;
+    }
+
+    // رسم المخطط الواقعي للصلاوات مع فروق الساعات الحقيقية
+    function renderPrayerTimeline(idx) {
+      const timelineEl = document.getElementById('tasks-prayer-timeline');
+      if (!timelineEl) return;
+      const checks = S.tasks[idx] || {};
+      const currentList = getDayTasksList(idx);
+
+      const prayers = [
+        { name: 'صلاة الفجر', time: '05:00', icon: '🕌' },
+        { id: 'fajr_dhuhr', isPeriod: true },
+        { name: 'صلاة الظهر', time: '12:00', icon: '🕌' },
+        { id: 'dhuhr_asr', isPeriod: true },
+        { name: 'صلاة العصر', time: '15:30', icon: '🕌' },
+        { id: 'asr_maghrib', isPeriod: true },
+        { name: 'صلاة المغرب', time: '18:00', icon: '🕌' },
+        { id: 'maghrib_isha', isPeriod: true },
+        { name: 'صلاة العشاء', time: '19:30', icon: '🕌' },
+        { id: 'isha_fajr', isPeriod: true }
+      ];
+
+      // فرز المهام غير الموصولة
+      const unassigned = currentList.filter(t => !t.period || !PRAYER_PERIODS[t.period]);
+
+      let html = '';
+
+      if (unassigned.length > 0) {
+        html += `
+        <div style="background:#141414; border:1px dashed var(--muted); border-radius:6px; padding:10px 14px; margin-bottom:10px;">
+          <div style="font-size:11px; font-weight:700; color:var(--gold); margin-bottom:8px;">
+            📥 مهام غير موصولة بفترة صلاة (${unassigned.length}):
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${unassigned.map(t => {
+              const ok = !!checks[t.id];
+              return `
+              <div class="prayer-task-card ${ok ? 'done' : ''}" draggable="true" ondragstart="onTaskDragStart(event, '${t.id}')">
+                <div style="display:flex; align-items:center; gap:8px;" onclick="toggleTask(${idx}, '${t.id}')">
+                  <span style="cursor:pointer;">${ok ? '✅' : '⬜'}</span>
+                  <span class="pt-label" style="font-size:12px; font-weight:600;">${t.label}</span>
+                </div>
+                <button type="button" class="n8n-node-pill unlinked" onclick="promptConnectTaskPeriod(${idx}, '${t.id}')">
+                  ⚡ وصل بفترة
+                </button>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }
+
+      prayers.forEach(item => {
+        if (!item.isPeriod) {
+          html += `
+          <div class="prayer-milestone">
+            <span class="prayer-node-dot"></span>
+            <span class="prayer-node-title">${item.icon} ${item.name}</span>
+            <span class="prayer-node-time">${item.time}</span>
+          </div>`;
+        } else {
+          const p = PRAYER_PERIODS[item.id];
+          const tasksInPeriod = currentList.filter(t => t.period === p.id);
+          html += `
+          <div class="prayer-period-block" id="ppb-${p.id}" style="min-height:${p.minHeight}px; border-right:4px solid ${p.color};"
+            ondragover="onPrayerDragOver(event)" ondragleave="onPrayerDragLeave(event)" ondrop="onPrayerDrop(event, '${p.id}')">
+            <div class="ppb-header">
+              <span class="ppb-name" style="color:${p.color};">
+                ${p.icon} ${p.name}
+                <span style="font-size:10px; color:var(--text2); font-weight:normal;">(${p.desc})</span>
+              </span>
+              <span class="ppb-meta">⏳ ${p.hours} س · ${p.time}</span>
+            </div>
+            <div class="ppb-tasks" id="tasks-in-${p.id}">
+              ${tasksInPeriod.length === 0 ? `
+                <div style="color:var(--muted); font-size:11px; padding:8px 0; text-align:center;">
+                  اسحب مهمة إلى هنا أو اضغط للربط 👇
+                </div>
+              ` : tasksInPeriod.map(t => {
+                const ok = !!checks[t.id];
+                return `
+                <div class="prayer-task-card ${ok ? 'done' : ''}" draggable="true" ondragstart="onTaskDragStart(event, '${t.id}')">
+                  <div style="display:flex; align-items:center; gap:8px;" onclick="toggleTask(${idx}, '${t.id}')">
+                    <span style="cursor:pointer;">${ok ? '✅' : '⬜'}</span>
+                    <span class="pt-label" style="font-size:12px; font-weight:600;">${t.label}</span>
+                    <span style="font-size:9px; color:var(--gold);">${t.priority}</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span class="n8n-node-pill linked" onclick="promptConnectTaskPeriod(${idx}, '${t.id}')" title="تغيير الفترة">
+                      ● موصولة
+                    </span>
+                    <span style="cursor:pointer; color:var(--muted); font-size:12px;" onclick="changeTaskPeriod(${idx}, '${t.id}', '')" title="فصل الربط">✕</span>
+                  </div>
+                </div>`;
+              }).join('')}
+            </div>
+            <button type="button" class="ppb-add-btn" onclick="promptSelectTaskForPeriod(${idx}, '${p.id}')">
+              + ربط مهمة بهذه الفترة (${p.name})
+            </button>
+          </div>`;
+        }
+      });
+
+      timelineEl.innerHTML = html;
+    }
+
+    function promptSelectTaskForPeriod(idx, periodKey) {
+      const currentList = getDayTasksList(idx);
+      if (currentList.length === 0) {
+        alert("لا توجد مهام مسجلة اليوم. أضف مهمة جديدة أولاً!");
+        return;
+      }
+      let msg = `اختر رقم المهمة لربطها بفترة (${PRAYER_PERIODS[periodKey].name}):\n\n`;
+      currentList.forEach((t, i) => {
+        const curr = t.period && PRAYER_PERIODS[t.period] ? `[موصولة بـ ${PRAYER_PERIODS[t.period].name}]` : '[غير موصولة]';
+        msg += `${i + 1}: ${t.label} ${curr}\n`;
+      });
+      const choice = prompt(msg);
+      if (choice === null) return;
+      const num = parseInt(choice.trim()) - 1;
+      if (!isNaN(num) && currentList[num]) {
+        changeTaskPeriod(idx, currentList[num].id, periodKey);
+      }
+    }
+
     function renderTasks(idx) {
       const checks = S.tasks[idx] || {};
       const links = S.taskLinks[idx] || {};
@@ -2645,7 +3108,12 @@
               `<input class="task-edit-input" value="${t.label}" onclick="event.stopPropagation()" onchange="editTaskLabel(${idx},${i}, this.value)" placeholder="اسم المهمة...">`
             }
               
-              <div style="display:flex; align-items:center; gap:6px;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span class="n8n-node-pill ${t.period && PRAYER_PERIODS[t.period] ? 'linked' : 'unlinked'}"
+                  onclick="event.stopPropagation(); promptConnectTaskPeriod(${idx}, '${t.id}')"
+                  title="ربط المهمة بفترة الصلاة (N8N Style)">
+                  ${t.period && PRAYER_PERIODS[t.period] ? `● ${PRAYER_PERIODS[t.period].icon} ${PRAYER_PERIODS[t.period].name}` : `⚡ ربط بفترة صلاة`}
+                </span>
                 <span style="font-size: 10px; color: #FF4D00; letter-spacing: -1px;" title="الأولوية">${priorityStars}</span>
                 <div class="task-cat">${t.cat}</div>
               </div>
@@ -2665,22 +3133,82 @@
       }
       const tb = document.getElementById('tasks-body');
       if (tb) tb.innerHTML = h;
+      if (currentTaskView === 'prayer') {
+        renderPrayerTimeline(idx);
+      }
+    }
+
+    // حساب رقم الأسبوع: دورة الأسبوع تبدأ من الجمعة (يوم التخطيط الأسبوعي) حتى نهاية الخميس
+    function getWeekNum(idx) {
+      return Math.floor((idx + 1) / 7) + 1;
+    }
+
+    // جلب أهداف الأسبوع مع هجرة ذكية لحفظ أهدافك التي تم إدخالها
+    function getWeekGoalsList(wk) {
+      if (!S.weekGoals) S.weekGoals = {};
+      if (!S.weekGoals[wk]) {
+        // حماية الأهداف التي سُجلت سابقاً في الأسبوع 18 لنقلها للأسبوع 19
+        if (wk === 19 && S.weekGoals[18] && S.weekGoals[18].length > 0) {
+          S.weekGoals[19] = JSON.parse(JSON.stringify(S.weekGoals[18]));
+        } else {
+          S.weekGoals[wk] = [];
+        }
+      }
+      return S.weekGoals[wk];
+    }
+
+    // تحديد الهدف كمكتمل / غير مكتمل
+    function toggleWeekGoal(wk, i) {
+      const list = getWeekGoalsList(wk);
+      if (!list || !list[i]) return;
+      if (typeof list[i] === 'string') {
+        list[i] = { text: list[i], done: true };
+      } else {
+        list[i].done = !list[i].done;
+      }
+      renderWeekGoals(wk);
+      syncToCloud();
     }
 
     function renderWeekGoals(wk) {
-      const goals = S.weekGoals[wk] || [];
+      const goals = getWeekGoalsList(wk);
       const body = document.getElementById('week-goals-body');
+      const countEl = document.getElementById('week-goals-count');
+      const titleEl = document.getElementById('week-goals-title');
+
+      const startIdx = (wk - 1) * 7 - 1;
+      const endIdx = startIdx + 6;
+      const dStart = gd(Math.max(0, startIdx));
+      const dEnd = gd(Math.max(0, endIdx));
+
+      if (titleEl) {
+        titleEl.textContent = `🎯 أهداف الأسبوع (${dStart.getDate()} ${AR_M[dStart.getMonth()]} — ${dEnd.getDate()} ${AR_M[dEnd.getMonth()]})`;
+      }
+
+      const doneCount = goals.filter(g => typeof g === 'object' && g.done).length;
+      if (countEl) countEl.textContent = `${doneCount}/${goals.length}`;
+
       if (!body) return;
       if (goals.length === 0) {
-        body.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:11px;">لا توجد أهداف محددة لهذا الأسبوع.</div>';
+        body.innerHTML = '<div style="text-align:center;padding:12px;color:var(--muted);font-size:11px;">لا توجد أهداف محددة لهذا الأسبوع بعد. أضف أهدافك بالأسفل 👇</div>';
         return;
       }
-      body.innerHTML = goals.map((g, i) => `
-        <div class="goal-item">
-          <div><span class="goal-arrow">›</span> ${g}</div>
-          <span class="goal-del-btn" onclick="deleteWeekGoal(${wk}, ${i})" title="حذف الهدف">✕</span>
-        </div>
-      `).join('');
+
+      body.innerHTML = goals.map((g, i) => {
+        const text = typeof g === 'object' ? g.text : g;
+        const isDone = typeof g === 'object' ? !!g.done : false;
+        return `
+          <div class="goal-item" style="cursor:pointer; padding:6px 0; ${isDone ? 'opacity:0.55;' : ''}" onclick="toggleWeekGoal(${wk}, ${i})">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border:1px solid ${isDone ? 'var(--gold)' : 'var(--border2)'}; border-radius:3px; background:${isDone ? 'var(--gold)' : 'transparent'}; color:#0a0a0a; font-size:10px; font-weight:900;">
+                ${isDone ? '✓' : ''}
+              </span>
+              <span style="${isDone ? 'text-decoration:line-through; color:var(--muted);' : 'color:var(--text2);'}">${text}</span>
+            </div>
+            <span class="goal-del-btn" onclick="event.stopPropagation(); deleteWeekGoal(${wk}, ${i})" title="حذف الهدف">✕</span>
+          </div>
+        `;
+      }).join('');
     }
 
     function addWeekGoal() {
@@ -2688,17 +3216,18 @@
       if (!inp) return;
       const txt = inp.value.trim();
       if (!txt) return;
-      const wk = Math.floor(S.cur / 7) + 1;
-      if (!S.weekGoals[wk]) S.weekGoals[wk] = [];
-      S.weekGoals[wk].push(txt);
+      const wk = getWeekNum(S.cur);
+      const list = getWeekGoalsList(wk);
+      list.push({ text: txt, done: false });
       inp.value = '';
       renderWeekGoals(wk);
       syncToCloud();
     }
 
     function deleteWeekGoal(wk, i) {
-      if (!S.weekGoals[wk]) return;
-      S.weekGoals[wk].splice(i, 1);
+      const list = getWeekGoalsList(wk);
+      if (!list) return;
+      list.splice(i, 1);
       renderWeekGoals(wk);
       syncToCloud();
     }
@@ -2749,9 +3278,11 @@
       const inp = document.getElementById('new-task-input');
       const catEl = document.getElementById('new-task-cat');
       const prioEl = document.getElementById('new-task-priority');
+      const periodEl = document.getElementById('new-task-period');
       if (!inp || !catEl) return;
       const cat = catEl.value;
       const priority = prioEl ? prioEl.value : '⭐⭐⭐';
+      const period = periodEl ? periodEl.value : '';
       const lbl = inp.value.trim();
       if (!lbl) return;
 
@@ -2760,10 +3291,12 @@
         id: 't_' + Date.now() + Math.random().toString(36).substr(2, 4),
         label: lbl,
         cat: cat,
-        priority: priority
+        priority: priority,
+        period: period || null
       });
 
       inp.value = '';
+      if (periodEl) periodEl.value = '';
       renderTasks(S.cur);
       syncToCloud();
     }
@@ -3167,19 +3700,19 @@
       const daysInMonth = new Date(y, m + 1, 0).getDate();
       const today = new Date();
 
-      let totalExp = 0, totalInc = 0;
+      let totalExp = 0, totalRealInc = 0, totalRolloverIgnored = 0;
       const catTotals = { 'أكل': 0, 'مواصلات': 0, 'تعليم': 0, 'رياضة': 0, 'ترفيه': 0, 'ملابس': 0, 'أخرى': 0 };
       const dailyData = [];
       let maxDayExp = 0;
       let maxDayNum = null;
       let daysWithExp = 0;
 
-      // جمع البيانات لجميع أيام الشهر
+      // جمع البيانات لجميع أيام الشهر مع منع الازدواجية والتكرار الناتج عن الترحيل اليومي
       for (let day = 1; day <= daysInMonth; day++) {
         const curD = new Date(y, m, day);
         const dayIdx = di(curD);
         let dayExp = 0;
-        let dayInc = 0;
+        let dayRealInc = 0;
 
         if (dayIdx >= 0 && dayIdx < NUM_DAYS) {
           if (S.exp[dayIdx]) {
@@ -3190,7 +3723,11 @@
             });
           }
           if (S.inc[dayIdx]) {
-            dayInc += (parseFloat(S.inc[dayIdx]) || 0);
+            const rawInc = parseFloat(S.inc[dayIdx]) || 0;
+            const rollVal = (S.rolloverFrom && S.rolloverFrom[dayIdx] !== undefined) ? (parseFloat(S.rolloverFrom[dayIdx]) || 0) : 0;
+            // الدخل الفعلي الجديد = إجمالي دخل اليوم ناقص ما تم ترحيله من الأمس لمنع احتساب نفس الفلوس مرتين
+            dayRealInc = Math.max(0, rawInc - rollVal);
+            totalRolloverIgnored += rollVal;
           }
         }
 
@@ -3203,13 +3740,19 @@
         }
 
         totalExp += dayExp;
-        totalInc += dayInc;
+        totalRealInc += dayRealInc;
 
         const isToday = (today.getFullYear() === y && today.getMonth() === m && today.getDate() === day);
         dailyData.push({ day, amt: dayExp, isToday });
       }
 
-      const net = totalInc - totalExp;
+      // حساب رصيد بداية الشهر إذا كان اليوم الأول ورث ترحيلاً من الشهر السابق
+      const firstDayIdx = di(new Date(y, m, 1));
+      const monthStartRollover = (firstDayIdx >= 0 && S.rolloverFrom && S.rolloverFrom[firstDayIdx]) ? (parseFloat(S.rolloverFrom[firstDayIdx]) || 0) : 0;
+
+      // صافي الرصيد الحقيقي = (رصيد أول الشهر + الدخل الجديد الفعلي) - المصاريف
+      const net = (monthStartRollover + totalRealInc) - totalExp;
+      const totalInc = totalRealInc + monthStartRollover;
       const avgDaily = daysWithExp > 0 ? Math.round(totalExp / daysWithExp) : 0;
       const expPercentOfInc = totalInc > 0 ? Math.min(100, Math.round((totalExp / totalInc) * 100)) : 0;
 
@@ -3377,6 +3920,22 @@
       if (id === 'stats') refreshStats();
       if (id === 'courses') renderGlobalCourses();
     }
+
+    
+    // حماية تامة ضد الزووم العشوائي وحركات التكبير في الهواتف
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
+          e.preventDefault();
+        }
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
 
     window.onload = function () {
       // 1. استرجاع فوري من الذاكرة المحلية كخط دفاع أول ضد التصفير

@@ -2489,9 +2489,10 @@
 
         <div style="font-size:10.5px; color:var(--muted); line-height:1.6; background:#161616; padding:10px 12px; border-radius:6px; border:1px solid var(--border);">
           💡 <b>أمثلة تفهمها الخوارزمية بالصوت أو النص:</b><br>
-          • <i>"بكرة عندي انترفيو أولوية 1 فترة الظهر ومصروف 50 مواصلات ودخل 500"</i><br>
-          • <i>"Meeting on 25 October priority 1 in Work period afternoon and 150 uber"</i><br>
-          • <i>"يوم 30 أكتوبر مهمة مقابلة P5 قسم Date فترة العصر | MIT: مذاكرة وقراءة | EXP: 40 مواصلات | INC: 400"</i>
+          • <i>"اعمل في المصاريف 40 جنيه مواصلات في الشروق" أو "صرفت في المواصلات 50 جنيه"</i> (تسجيل مصاريف مباشرة)<br>
+          • <i>"سجل في الدخل 500 جنيه فريلانس"</i> (تسجيل دخل إضافي)<br>
+          • <i>"بكرة عندي انترفيو أولوية 1 فترة الظهر ومصروف 50 مواصلات"</i> (مهمة + مصروف معاً)<br>
+          • <i>"تاسك مذاكرة بايثون P2 فترة العصر قسم Study"</i> (مهمة جديدة)
         </div>
       </div>
     </div>
@@ -2746,121 +2747,7 @@
 
     auth.getRedirectResult().catch(() => {});
 
-    // المحلل الذكي لنصوص وأوامر Spark (مهام، تواريخ، أولويات، صلوات، MIT، مصاريف، ودخل - ثنائي اللغة عربي وإنجليزي ومكس)
-    function parseSmartSparkText(title, notes, due) {
-      const fullText = ((title || '') + ' ' + (notes || '')).trim();
-      let dayIdx = null;
-
-      if (due) {
-        const d = new Date(due);
-        if (!isNaN(d.getTime())) dayIdx = di(d);
-      }
-
-      // 1. استخراج التاريخ (عربي وإنجليزي وكلمات اليوم/بكرة)
-      if (/\b(today|النهاردة|النهارده|اليوم)\b/i.test(fullText)) {
-        const t = new Date(); t.setHours(0,0,0,0); dayIdx = di(t);
-      } else if (/\b(tomorrow|بكره|بكرا|غدا|غداً)\b/i.test(fullText)) {
-        const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(0,0,0,0); dayIdx = di(t);
-      }
-
-      const EN_M = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-      const AR_M = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-
-      if (dayIdx === null) {
-        const dMatch = fullText.match(/(\d{4}[-/]\d{1,2}[-/]\d{1,2})|(\d{1,2})[-/](\d{1,2})|(\d{1,2})(?:st|nd|rd|th)?\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)|(\d{1,2})\s*(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/i);
-        if (dMatch) {
-          const nowYear = 2026;
-          if (dMatch[1]) {
-            dayIdx = di(new Date(dMatch[1]));
-          } else if (dMatch[2] && dMatch[3]) {
-            dayIdx = di(new Date(nowYear, parseInt(dMatch[3]) - 1, parseInt(dMatch[2])));
-          } else if (dMatch[4] && dMatch[5]) {
-            const prefix = dMatch[5].toLowerCase().slice(0, 3);
-            const mIdx = EN_M.indexOf(prefix);
-            if (mIdx !== -1) dayIdx = di(new Date(nowYear, mIdx, parseInt(dMatch[4])));
-          } else if (dMatch[6] && dMatch[7]) {
-            const mIdx = AR_M.indexOf(dMatch[7]);
-            if (mIdx !== -1) dayIdx = di(new Date(nowYear, mIdx, parseInt(dMatch[6])));
-          }
-        }
-      }
-
-      if (dayIdx === null || isNaN(dayIdx) || dayIdx < 0 || dayIdx >= NUM_DAYS) {
-        dayIdx = ti();
-      }
-
-      // 2. الأولوية (P1 إلى P5)
-      let priority = '⭐⭐⭐';
-      if (/p1|priority\s*1|top\s*priority|أولوية\s*1|بايورتي\s*1|أولى/i.test(fullText)) priority = '⭐⭐⭐⭐⭐';
-      else if (/p2|priority\s*2|أولوية\s*2|بايورتي\s*2/i.test(fullText)) priority = '⭐⭐⭐⭐';
-      else if (/p4|priority\s*4|أولوية\s*4|بايورتي\s*4/i.test(fullText)) priority = '⭐⭐';
-      else if (/p5|priority\s*5|lowest\s*priority|أولوية\s*5|بايورتي\s*5|فايف/i.test(fullText)) priority = '⭐';
-
-      // 3. القسم (Category)
-      let cat = 'Tasks';
-      const catsMap = [
-        { cat: 'ديني', re: /ديني|دين|صلاة|قرآن|deen|islamic|prayer/i },
-        { cat: 'Sport', re: /sport|gym|تمرينة|تمرين|جيم|رياضة|workout/i },
-        { cat: 'Study', re: /study|مذاكرة|مذاكره|درس|دراسة|exam|امتحان/i },
-        { cat: 'Course', re: /course|كورس|كورسات|محاضرة|lecture/i },
-        { cat: 'Date', re: /date|مشوار|خروجة|خروجه|لقاء|meeting|مقابلة|انترفيو/i },
-        { cat: 'Personal', re: /personal|شخصي|حاجة خاصة|private/i },
-        { cat: 'Work', re: /work|شغل|وظيفة|عميل|client|project|مشروع/i }
-      ];
-      for (const c of catsMap) {
-        if (c.re.test(fullText)) { cat = c.cat; break; }
-      }
-
-      // 4. فترة الصلاة
-      let period = null;
-      if (/فجر|صبح|fajr|dawn|morning/i.test(fullText)) period = 'fajr_dhuhr';
-      else if (/ظهر|dhuhr|noon|midday/i.test(fullText)) period = 'dhuhr_asr';
-      else if (/عصر|asr|afternoon/i.test(fullText)) period = 'asr_maghrib';
-      else if (/مغرب|maghrib|sunset/i.test(fullText)) period = 'maghrib_isha';
-      else if (/عشاء|ليل|isha|night|evening/i.test(fullText)) period = 'isha_fajr';
-
-      // 5. أهم 3 مهام (MIT)
-      let mit = null;
-      const mitMatch = fullText.match(/(?:mit|top\s*3|أهم\s*(?:3|ثلاث)?\s*مهام)[:\s]+([^|;\n\r]+)/i);
-      if (mitMatch) mit = mitMatch[1].trim();
-
-      // 6. المصاريف المسجلة
-      let expList = [];
-      const expMatches = [...fullText.matchAll(/(?:exp|expense|spent|paid|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*([^|;\n\r]+)?/gi)];
-      for (const m of expMatches) {
-        const amt = parseFloat(m[1]);
-        const rawDesc = (m[2] || 'مصروف').trim();
-        let expCat = 'أخرى';
-        if (/مواصلات|uber|careem|taxi|bus|مترو|transport/i.test(rawDesc)) expCat = 'مواصلات';
-        else if (/أكل|طعام|غدا|فطار|عشا|food|lunch|dinner|breakfast|burger/i.test(rawDesc)) expCat = 'أكل';
-        else if (/تعليم|كتب|كورس|course|book/i.test(rawDesc)) expCat = 'تعليم';
-        else if (/رياضة|جيم|gym|creatine/i.test(rawDesc)) expCat = 'رياضة';
-        else if (/ترفيه|cinema|سينما|game/i.test(rawDesc)) expCat = 'ترفيه';
-        else if (/ملابس|clothes|shirt/i.test(rawDesc)) expCat = 'ملابس';
-        expList.push({ amt, cat: expCat, desc: rawDesc });
-      }
-
-      // 7. الدخل الإضافي
-      let incList = [];
-      const incMatches = [...fullText.matchAll(/(?:inc|income|earned|دخل|دخل إضافي)[:\s]+(\d+(?:\.\d+)?)(?:\s*([^|;\n\r]+))?/gi)];
-      for (const m of incMatches) {
-        const amt = parseFloat(m[1]);
-        const desc = (m[2] || 'دخل إضافي').trim();
-        incList.push({ amt, cat: 'دخل إضافي', desc: desc || 'دخل إضافي' });
-      }
-
-      // تنظيف عنوان المهمة الأساسي
-      let cleanLabel = title.split('|')[0]
-        .replace(/@[\s]*[a-zA-Z0-9_\u0600-\u06FF\/\-]+/g, '')
-        .replace(/(?:بايورتي|أولوية|تجري|فترة|قسم|priority|category)\s*[\w\u0600-\u06FF\d]+/gi, '')
-        .replace(/\b(on|at|in|for|يوم|فترة)\b/gi, '')
-        .trim();
-      if (!cleanLabel) cleanLabel = title.trim();
-
-      return { dayIdx, cleanLabel, priority, cat, period, mit, expList, incList };
-    }
-
-            // قاموس تحويل الكلمات والمصطلحات الإنجليزية المنطوقة بالعربي إلى كتابة إنجليزية صحيحة
+    // قاموس تحويل الكلمات والمصطلحات الإنجليزية المنطوقة بالعربي إلى كتابة إنجليزية صحيحة
     function convertPhoneticToEnglish(text) {
       if (!text) return '';
       const enMap = [
@@ -2936,7 +2823,18 @@
       return s.trim();
     }
 
-    // المحلل الذكي لنصوص وأوامر Spark (ثنائي اللغة: عربي وإنجليزي ومكس مع معالجة ذكية للعنوان والكاتيجوري)
+    // دالة تصنيف المصاريف تلقائياً حسب الوصف
+    function categorizeExpense(desc) {
+      if (/مواصلات|uber|careem|taxi|bus|مترو|تاكسي|بنزين|كارته|كارتة|قطار|عربيه|عربية|مشوار|شروق|سفر|transport/i.test(desc)) return 'مواصلات';
+      if (/أكل|اكل|طعام|غدا|غداء|فطار|عشا|عشاء|شرب|قهوة|قهوه|كافيه|شاي|سناك|حلويات|ماك|مطعم|food|lunch|dinner|breakfast|burger|pizza|coffee/i.test(desc)) return 'أكل';
+      if (/تعليم|كتب|كتاب|كورس|course|book|مذكرات|شيت|جامعة|دراسة|study/i.test(desc)) return 'تعليم';
+      if (/رياضة|رياضه|جيم|gym|creatine|بروتين|مكملات|workout/i.test(desc)) return 'رياضة';
+      if (/ترفيه|سينما|cinema|game|العاب|بلايستيشن|بلاي ستيشن|فسحة|خروجة|خروجه/i.test(desc)) return 'ترفيه';
+      if (/ملابس|هدوم|لبس|clothes|shirt|شوز|كوتشي|بنطلون/i.test(desc)) return 'ملابس';
+      return 'أخرى';
+    }
+
+    // المحلل الذكي لنصوص وأوامر Spark (ثنائي اللغة: تفريق ذكي تام بين المصاريف، الدخل، والمهام)
     function parseSmartSparkText(title, notes, due) {
       let raw = ((title || '') + ' ' + (notes || '')).trim();
       raw = removeVoiceDuplicates(raw);
@@ -2978,15 +2876,16 @@
       }
 
       if (dayIdx === null || isNaN(dayIdx) || dayIdx < 0 || dayIdx >= NUM_DAYS) {
-        dayIdx = ti();
+        dayIdx = (typeof S !== 'undefined' && typeof S.cur === 'number') ? S.cur : ti();
       }
 
-      // 2. الأولوية (P1 إلى P5) بدعم بريتي، بايورتي، والأرقام بالإنجليزية والعربية
+      // 2. الأولوية (P1 إلى P5)
       let priority = '⭐⭐⭐';
-      if (/\b(?:p1|priority\s*1|أولوية\s*1|بايورتي\s*1|بريتي\s*1|أولى|one|وان)\b/i.test(fullText)) priority = '⭐⭐⭐⭐⭐';
-      else if (/\b(?:p2|priority\s*2|أولوية\s*2|بايورتي\s*2|بريتي\s*2|تانية|two|تو)\b/i.test(fullText)) priority = '⭐⭐⭐⭐';
-      else if (/\b(?:p4|priority\s*4|أولوية\s*4|بايورتي\s*4|بريتي\s*4|رابعة|four|فور)\b/i.test(fullText)) priority = '⭐⭐';
-      else if (/\b(?:p5|priority\s*(?:بتاعتها\s*)?5|lowest\s*priority|أولوية\s*5|بايورتي\s*(?:بتاعتها\s*)?5|بريتي\s*(?:بتاعتها\s*)?5|فايف|five|خامسة)\b/i.test(fullText)) priority = '⭐';
+      let hasExplicitPriority = false;
+      if (/\b(?:p1|priority\s*1|أولوية\s*1|بايورتي\s*1|بريتي\s*1|أولى|one|وان)\b/i.test(fullText)) { priority = '⭐⭐⭐⭐⭐'; hasExplicitPriority = true; }
+      else if (/\b(?:p2|priority\s*2|أولوية\s*2|بايورتي\s*2|بريتي\s*2|تانية|two|تو)\b/i.test(fullText)) { priority = '⭐⭐⭐⭐'; hasExplicitPriority = true; }
+      else if (/\b(?:p4|priority\s*4|أولوية\s*4|بايورتي\s*4|بريتي\s*4|رابعة|four|فور)\b/i.test(fullText)) { priority = '⭐⭐'; hasExplicitPriority = true; }
+      else if (/\b(?:p5|priority\s*(?:بتاعتها\s*)?5|lowest\s*priority|أولوية\s*5|بايورتي\s*(?:بتاعتها\s*)?5|بريتي\s*(?:بتاعتها\s*)?5|فايف|five|خامسة)\b/i.test(fullText)) { priority = '⭐'; hasExplicitPriority = true; }
 
       // 3. القسم (Category)
       let cat = 'Tasks';
@@ -2998,7 +2897,7 @@
       else if (/personal|شخصي/i.test(fullText)) cat = 'Personal';
       else if (/ديني|دين|صلاة|deen|prayer/i.test(fullText)) cat = 'ديني';
 
-      // 4. فترة الصلاة (فحص المدى الزوجي أولاً لضمان الدقة مثل: المغرب للعشاء)
+      // 4. فترة الصلاة
       let period = null;
       if (/مغرب.*(?:عشاء|عشا)|maghrib.*isha/i.test(fullText)) period = 'maghrib_isha';
       else if (/عصر.*مغرب|asr.*maghrib/i.test(fullText)) period = 'asr_maghrib';
@@ -3016,32 +2915,104 @@
       const mitMatch = fullText.match(/(?:mit|top\s*3|أهم\s*(?:3|ثلاث)?\s*مهام)[:\s]+([^|;\n\r]+)/i);
       if (mitMatch) mit = mitMatch[1].trim();
 
-      // 6. المصاريف المسجلة
+      // 6. استخراج المصاريف المسجلة بكافة الصيغ العامية والأوامر الصوتية
       let expList = [];
-      const expMatches = [...fullText.matchAll(/(?:exp|expense|spent|paid|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*([^|;\n\r]+)?/gi)];
+
+      // صيغة 1: EXP: 50 Uber أو صرفت: 50 جنيه
+      const expMatches = [...fullText.matchAll(/(?:exp|expense|spent|paid|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]+)?/gi)];
       for (const m of expMatches) {
         const amt = parseFloat(m[1]);
-        const rawDesc = (m[2] || 'مصروف').trim();
-        let expCat = 'أخرى';
-        if (/مواصلات|uber|careem|taxi|bus|مترو|transport/i.test(rawDesc)) expCat = 'مواصلات';
-        else if (/أكل|طعام|غدا|فطار|عشا|food|lunch|dinner|breakfast|burger/i.test(rawDesc)) expCat = 'أكل';
-        else if (/تعليم|كتب|كورس|course|book/i.test(rawDesc)) expCat = 'تعليم';
-        else if (/رياضة|جيم|gym|creatine/i.test(rawDesc)) expCat = 'رياضة';
-        else if (/ترفيه|cinema|سينما|game/i.test(rawDesc)) expCat = 'ترفيه';
-        else if (/ملابس|clothes|shirt/i.test(rawDesc)) expCat = 'ملابس';
-        expList.push({ amt, cat: expCat, desc: rawDesc });
+        let rawDesc = (m[2] || '').trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '');
+        const expCat = categorizeExpense(rawDesc);
+        expList.push({ amt, cat: expCat, desc: rawDesc || (expCat !== 'أخرى' ? expCat : 'مصروف') });
       }
 
-      // 7. الدخل الإضافي
+      // صيغة 2: اعمل حاجه في المصاريف X جنيه Y أو سجل في المصاريف X جنيه Y
+      if (expList.length === 0) {
+        const patExp1 = /(?:اعمل\s+(?:حاجه|حاجة)\s+في\s+المصاريف|سجل\s+(?:في\s+)?المصاريف|حط\s+(?:في\s+)?المصاريف|ضيف\s+(?:في\s+)?المصاريف|في\s+المصاريف|مصاريف|مصروف)\s*([^0-9\n\r]*?)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]*)/gi;
+        const matches1 = [...fullText.matchAll(patExp1)];
+        for (const m of matches1) {
+          const amt = parseFloat(m[2]);
+          const p1 = (m[1] || '').trim();
+          const p2 = (m[3] || '').trim();
+          let desc = `${p1} ${p2}`.trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '').trim();
+          const expCat = categorizeExpense(desc);
+          if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
+          expList.push({ amt, cat: expCat, desc });
+        }
+      }
+
+      // صيغة 3: صرفت في مواصلات 50 جنيه أو دفعت في الأكل 100 جنيه
+      if (expList.length === 0) {
+        const patExp2 = /(?:صرفت|دفعت|اشتريت|شريت)\s+(?:في\s+)?([^0-9\n\r]+?)\s*(?:بـ|ب|مبلغ)?\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi;
+        const matches2 = [...fullText.matchAll(patExp2)];
+        for (const m of matches2) {
+          const desc = m[1].trim().replace(/^(?:في|بـ|ب)\s*/i, '');
+          const amt = parseFloat(m[2]);
+          const expCat = categorizeExpense(desc);
+          expList.push({ amt, cat: expCat, desc: desc || expCat });
+        }
+      }
+
+      // صيغة 4: صرفت 40 جنيه مواصلات
+      if (expList.length === 0) {
+        const patExp3 = /(?:صرفت|دفعت|اشتريت|شريت)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+)?([^|;\n\r]*)/gi;
+        const matches3 = [...fullText.matchAll(patExp3)];
+        for (const m of matches3) {
+          const amt = parseFloat(m[1]);
+          let desc = (m[2] || '').trim().replace(/^(?:في|بـ|ب)\s*/i, '');
+          const expCat = categorizeExpense(desc);
+          if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
+          expList.push({ amt, cat: expCat, desc });
+        }
+      }
+
+      // صيغة 5: 35 جنيه في المصاريف كافيه
+      if (expList.length === 0) {
+        const patExp4 = /(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+المصاريف|مصاريف|مصروف)\s*([^|;\n\r]*)/gi;
+        const matches4 = [...fullText.matchAll(patExp4)];
+        for (const m of matches4) {
+          const amt = parseFloat(m[1]);
+          let desc = (m[2] || '').trim().replace(/^(?:في|بـ|ب)\s*/i, '');
+          const expCat = categorizeExpense(desc);
+          if (!desc) desc = expCat !== 'أخرى' ? expCat : 'مصروف';
+          expList.push({ amt, cat: expCat, desc });
+        }
+      }
+
+      // 7. استخراج الدخل الإضافي
       let incList = [];
-      const incMatches = [...fullText.matchAll(/(?:inc|income|earned|دخل|دخل إضافي)[:\s]+(\d+(?:\.\d+)?)(?:\s*([^|;\n\r]+))?/gi)];
+      const patInc = /(?:inc|income|earned|دخل\s+إضافي|دخل\s+اضافي|في\s+الدخل|سجل\s+(?:في\s+)?الدخل|دخل|قبضت|جالي)\s*([^0-9\n\r]*?)\s*(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*([^|;\n\r]*)/gi;
+      const incMatches = [...fullText.matchAll(patInc)];
       for (const m of incMatches) {
-        const amt = parseFloat(m[1]);
-        const desc = (m[2] || 'دخل إضافي').trim();
-        incList.push({ amt, cat: 'دخل إضافي', desc: desc || 'دخل إضافي' });
+        const amt = parseFloat(m[2]);
+        let desc = `${m[1].trim()} ${m[3].trim()}`.trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '');
+        if (!desc) desc = 'دخل إضافي';
+        incList.push({ amt, cat: 'دخل إضافي', desc });
       }
 
-      // استخراج عنوان المهمة النظيف بدون حشو الأوامر
+      // 8. التحديد الذكي: هل الأمر يحتوي على مهمة task أم هو أمر مالي بحت (مصاريف / دخل)؟
+      const hasFinancial = expList.length > 0 || incList.length > 0;
+      const hasExplicitTask = /\b(تاسك|task|مهمة|مهمه|انترفيو|interview|meeting|ميتنج|اجتماع|مشوار|مذاكرة|study|workout|تمرينة|تمرين|جيم)\b/i.test(fullText);
+      const hasPeriod = period !== null;
+
+      let hasTask = true;
+      if (hasFinancial && !hasExplicitTask && !hasPeriod && !hasExplicitPriority) {
+        let residual = fullText;
+        residual = residual.replace(/(?:اعمل\s+(?:حاجه|حاجة)\s+في\s+المصاريف|سجل\s+(?:في\s+)?المصاريف|حط\s+(?:في\s+)?المصاريف|ضيف\s+(?:في\s+)?المصاريف|في\s+المصاريف|مصاريف|مصروف|صرفت|دفعت|اشتريت|شريت|exp|expense|spent|paid).*?(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi, '');
+        residual = residual.replace(/(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?\s*(?:في\s+المصاريف|مصاريف|مصروف)/gi, '');
+        residual = residual.replace(/(?:دخل\s+إضافي|دخل\s+اضافي|سجل\s+(?:في\s+)?الدخل|في\s+الدخل|دخل|قبضت|جالي|inc|income|earned).*?(\d+(?:\.\d+)?)\s*(?:جنيه|جنية|ج|egp|le)?/gi, '');
+        residual = residual.replace(/\b(today|tomorrow|النهاردة|النهارده|اليوم|بكره|بكرا|غدا|غداً|في|على|من|و|مع|بـ|ب|جنيه|جنية|ج)\b/gi, '');
+        residual = residual.trim().replace(/^[\s:,.\-|]+|[\s:,.\-|]+$/g, '');
+
+        const allExpDesc = [...expList, ...incList].map(e => e.desc).join(' ');
+        const resWords = residual.split(/\s+/).filter(w => w && !allExpDesc.includes(w));
+        if (resWords.length === 0 || resWords.join(' ').length < 3) {
+          hasTask = false;
+        }
+      }
+
+      // تنظيف عنوان المهمة النظيف بدون حشو الأوامر
       let cleanLabel = fullText.split('|')[0];
       cleanLabel = cleanLabel.split(/\b(?:mit|exp|inc|مصروف|دخل)[:\s]/i)[0];
       cleanLabel = cleanLabel.replace(/\b(today|tomorrow|النهاردة|النهارده|اليوم|بكره|بكرا|غدا|غداً)\b/gi, '');
@@ -3053,13 +3024,12 @@
       cleanLabel = cleanLabel.replace(/\b(عنوان\s+التاسك|اسم\s+التاسك|تاسك|task|مهمة|مهمه)\b/gi, '');
       cleanLabel = cleanLabel.replace(/\b(بتاعتها|بتاعها|الميعاد|ميعاد|والميعاد|بتاع|بتاعه|بتاعت|كذا|اقول\s*له|مثلا|مثلاً)\b/gi, '');
       cleanLabel = cleanLabel.replace(/^\s*(?:في|on|at|for)\s+/gi, '');
-      cleanLabel = cleanLabel.replace(/\s+/g, ' ').trim(' :-,|');
+      cleanLabel = cleanLabel.replace(/\s+/g, ' ').trim().replace(/^[\s:,.\-|]+|[\s:,.\-|]+$/g, '');
 
       if (!cleanLabel) cleanLabel = fullText.split('|')[0].trim();
 
-      return { dayIdx, cleanLabel, priority, cat, period, mit, expList, incList };
+      return { dayIdx, cleanLabel, priority, cat, period, mit, expList, incList, hasTask };
     }
-
     // إدارة نافذة أمر Spark والتعرف الصوتي الذكي
     let sparkRecognition = null;
     let isSparkListening = false;
@@ -3282,15 +3252,18 @@
       const targetTasks = getDayTasksList(targetDayIdx);
       if (!S.tasks[targetDayIdx]) S.tasks[targetDayIdx] = {};
 
-      const newId = 't_sp_' + Date.now();
-      targetTasks.push({
-        id: newId,
-        label: p.cleanLabel,
-        cat: p.cat,
-        priority: p.priority,
-        period: p.period,
-        fromSpark: true
-      });
+      // إضافة المهمة فقط إذا كان الأمر يحتوي على مهمة وليس أمراً مالياً بحتاً
+      if (p.hasTask) {
+        const newId = 't_sp_' + Date.now();
+        targetTasks.push({
+          id: newId,
+          label: p.cleanLabel,
+          cat: p.cat,
+          priority: p.priority,
+          period: p.period,
+          fromSpark: true
+        });
+      }
 
       if (p.mit) {
         if (!S.notes[targetDayIdx]) S.notes[targetDayIdx] = {};
@@ -3320,7 +3293,18 @@
       syncToCloud();
 
       const d = gd(targetDayIdx);
-      alert("✅ تم تنفيذ وتوزيع أمرك بنجاح!\n\n📅 اليوم: " + d.getDate() + " " + AR_M[d.getMonth()] + " " + d.getFullYear() + "\n📌 المهمة: " + p.cleanLabel + " (" + p.priority + ")\n📁 القسم: " + p.cat + "\n🕌 فترة الصلاة: " + (p.period ? PRAYER_PERIODS[p.period].name : 'بدون ربط') + "\n📝 MIT: " + (p.mit || '---') + "\n💸 مصاريف: " + (p.expList.length > 0 ? p.expList.map(x=>x.amt+'ج '+x.desc).join(', ') : 'لا يوجد') + "\n💵 دخل إضافي: " + (p.incList.length > 0 ? p.incList.map(x=>x.amt+'ج').join(', ') : 'لا يوجد'));
+      const dateStr = d.getDate() + " " + AR_M[d.getMonth()] + " " + d.getFullYear();
+
+      // رسالة تأكيد مخصصة وواضحة حسب نوع العملية
+      if (!p.hasTask && p.expList.length > 0 && p.incList.length === 0) {
+        const expStr = p.expList.map(x => x.amt + ' ج (' + x.desc + ')').join(', ');
+        alert("💸 تم تسجيل المصروف بنجاح!\n\n📅 اليوم: " + dateStr + "\n💸 المصروف: " + expStr + "\n💰 تم الخصم وتحديث المتبقي الصافي في شاشة اليوم (ولم يتم إنشاء أي مهمة).");
+      } else if (!p.hasTask && p.incList.length > 0 && p.expList.length === 0) {
+        const incStr = p.incList.map(x => '+' + x.amt + ' ج (' + x.desc + ')').join(', ');
+        alert("💵 تم تسجيل الدخل الإضافي بنجاح!\n\n📅 اليوم: " + dateStr + "\n🟢 الدخل: " + incStr + "\n💰 تم زيادة الرصيد المتاح لليوم تلقائياً (ولم يتم إنشاء أي مهمة).");
+      } else {
+        alert("✅ تم تنفيذ وتوزيع أمرك بنجاح!\n\n📅 اليوم: " + dateStr + (p.hasTask ? "\n📌 المهمة: " + p.cleanLabel + " (" + p.priority + ")\n📁 القسم: " + p.cat + "\n🕌 فترة الصلاة: " + (p.period ? PRAYER_PERIODS[p.period].name : 'بدون ربط') : '') + (p.mit ? "\n📝 MIT: " + p.mit : '') + (p.expList.length > 0 ? "\n💸 مصاريف: " + p.expList.map(x=>x.amt+'ج '+x.desc).join(', ') : '') + (p.incList.length > 0 ? "\n💵 دخل إضافي: " + p.incList.map(x=>x.amt+'ج').join(', ') : ''));
+      }
     }
 
     // دالة تسجيل الخروج

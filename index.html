@@ -2441,6 +2441,54 @@
 
     </div>
   </div>
+  <!-- نافذة الأمر الصوتي والذكي لـ Spark (عربي وإنجليزي ومكس) -->
+  <div id="spark-ai-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:999998; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#141414; border:1px solid #FF4D00; border-radius:12px; max-width:480px; width:100%; box-shadow:0 8px 32px rgba(255,77,0,0.25); overflow:hidden; animation:fadeUp .25s ease both;">
+      <div style="padding:16px 20px; background:#1a1a1a; border-bottom:1px solid #242424; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:20px;">🤖</span>
+          <span style="font-size:14px; font-weight:800; color:#F5F0EB;">أمر ذكي لـ Spark — صوتي ونصي</span>
+        </div>
+        <button type="button" onclick="closeSparkModal()" style="background:transparent; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:0 4px; font-weight:bold;">✕</button>
+      </div>
+
+      <div style="padding:20px; display:flex; flex-direction:column; gap:14px;">
+        <div style="position:relative;">
+          <textarea id="spark-cmd-input" rows="4" style="width:100%; background:#1a1a1a; border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-family:'Cairo', sans-serif; font-size:13px; color:#F5F0EB; outline:none; resize:none; line-height:1.6;" placeholder="اكتب هنا أو اضغط على زر المايك وتحدث بالصوت...&#10;(يفهم عربي و English ومكس)"></textarea>
+          <div id="spark-mic-status" style="display:none; font-size:11px; font-weight:700; color:#FF4D00; margin-top:6px; align-items:center; gap:6px;">
+            <span class="pulse-dot" style="background:#FF4D00; box-shadow:0 0 8px #FF4D00;"></span>
+            <span id="spark-mic-status-txt">جاري الاستماع... تحدث الآن (عربي / English)</span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+          <!-- زر المايك الصوتي -->
+          <button type="button" id="btn-spark-mic" onclick="toggleSparkVoice()" style="flex:1; padding:10px 14px; border-radius:6px; border:1px solid #FF4D00; background:rgba(255,77,0,0.15); color:#FF4D00; font-family:'Cairo', sans-serif; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s;">
+            <span id="spark-mic-icon" style="font-size:16px;">🎙️</span>
+            <span id="spark-mic-txt">تحدث بالصوت (Voice)</span>
+          </button>
+
+          <!-- زر المسح -->
+          <button type="button" onclick="document.getElementById('spark-cmd-input').value=''" style="padding:10px 14px; border-radius:6px; border:1px solid var(--border); background:#1a1a1a; color:var(--text2); font-family:'Cairo', sans-serif; font-size:12px; font-weight:700; cursor:pointer;">
+            مسح
+          </button>
+        </div>
+
+        <!-- زر التنفيذ الأساسي -->
+        <button type="button" class="btn btn-gold" onclick="executeSparkCommandFromModal()" style="width:100%; padding:12px; border-radius:6px; font-size:13px; font-weight:900; display:flex; align-items:center; justify-content:center; gap:8px;">
+          ⚡ تنفيذ وتوزيع في التطبيق
+        </button>
+
+        <div style="font-size:10.5px; color:var(--muted); line-height:1.6; background:#161616; padding:10px 12px; border-radius:6px; border:1px solid var(--border);">
+          💡 <b>أمثلة تفهمها الخوارزمية بالصوت أو النص:</b><br>
+          • <i>"بكرة عندي انترفيو أولوية 1 فترة الظهر ومصروف 50 مواصلات ودخل 500"</i><br>
+          • <i>"Meeting on 25 October priority 1 in Work period afternoon and 150 uber"</i><br>
+          • <i>"يوم 30 أكتوبر مهمة مقابلة P5 قسم Date فترة العصر | MIT: مذاكرة وقراءة | EXP: 40 مواصلات | INC: 400"</i>
+        </div>
+      </div>
+    </div>
+  </div>
+
 
   <!-- شاشة القفل وتسجيل الدخول -->
   <div id="auth-overlay"
@@ -2708,83 +2756,103 @@
       }
     }).catch(() => {});
 
-    // المحلل الذكي لنصوص وأوامر Spark (مهام، تواريخ، أولويات، صلوات، MIT، مصاريف، ودخل)
+    // المحلل الذكي لنصوص وأوامر Spark (مهام، تواريخ، أولويات، صلوات، MIT، مصاريف، ودخل - ثنائي اللغة عربي وإنجليزي ومكس)
     function parseSmartSparkText(title, notes, due) {
       const fullText = ((title || '') + ' ' + (notes || '')).trim();
       let dayIdx = null;
 
-      // 1. استخراج التاريخ
       if (due) {
         const d = new Date(due);
         if (!isNaN(d.getTime())) dayIdx = di(d);
       }
 
-      const dateMatch = fullText.match(/(\d{4}[-/]\d{1,2}[-/]\d{1,2})|(\d{1,2})[-/](\d{1,2})|(\d{1,2})\s*(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/);
-      if (dateMatch) {
-        const nowYear = 2026;
-        if (dateMatch[1]) {
-          dayIdx = di(new Date(dateMatch[1]));
-        } else if (dateMatch[2] && dateMatch[3]) {
-          const day = parseInt(dateMatch[2]);
-          const month = parseInt(dateMatch[3]);
-          dayIdx = di(new Date(nowYear, month - 1, day));
-        } else if (dateMatch[4] && dateMatch[5]) {
-          const AR_M = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-          const mIdx = AR_M.indexOf(dateMatch[5]);
-          if (mIdx !== -1) dayIdx = di(new Date(nowYear, mIdx, parseInt(dateMatch[4])));
+      // 1. استخراج التاريخ (عربي وإنجليزي وكلمات اليوم/بكرة)
+      if (/\b(today|النهاردة|النهارده|اليوم)\b/i.test(fullText)) {
+        const t = new Date(); t.setHours(0,0,0,0); dayIdx = di(t);
+      } else if (/\b(tomorrow|بكره|بكرا|غدا|غداً)\b/i.test(fullText)) {
+        const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(0,0,0,0); dayIdx = di(t);
+      }
+
+      const EN_M = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      const AR_M = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+      if (dayIdx === null) {
+        const dMatch = fullText.match(/(\d{4}[-/]\d{1,2}[-/]\d{1,2})|(\d{1,2})[-/](\d{1,2})|(\d{1,2})(?:st|nd|rd|th)?\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)|(\d{1,2})\s*(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)/i);
+        if (dMatch) {
+          const nowYear = 2026;
+          if (dMatch[1]) {
+            dayIdx = di(new Date(dMatch[1]));
+          } else if (dMatch[2] && dMatch[3]) {
+            dayIdx = di(new Date(nowYear, parseInt(dMatch[3]) - 1, parseInt(dMatch[2])));
+          } else if (dMatch[4] && dMatch[5]) {
+            const prefix = dMatch[5].toLowerCase().slice(0, 3);
+            const mIdx = EN_M.indexOf(prefix);
+            if (mIdx !== -1) dayIdx = di(new Date(nowYear, mIdx, parseInt(dMatch[4])));
+          } else if (dMatch[6] && dMatch[7]) {
+            const mIdx = AR_M.indexOf(dMatch[7]);
+            if (mIdx !== -1) dayIdx = di(new Date(nowYear, mIdx, parseInt(dMatch[6])));
+          }
         }
       }
 
-      if (dayIdx === null || dayIdx < 0 || dayIdx >= NUM_DAYS) {
+      if (dayIdx === null || isNaN(dayIdx) || dayIdx < 0 || dayIdx >= NUM_DAYS) {
         dayIdx = ti();
       }
 
       // 2. الأولوية (P1 إلى P5)
       let priority = '⭐⭐⭐';
-      if (/p1|بايورتي\s*1|أولوية\s*1|أولى/i.test(fullText)) priority = '⭐⭐⭐⭐⭐';
-      else if (/p2|بايورتي\s*2|أولوية\s*2/i.test(fullText)) priority = '⭐⭐⭐⭐';
-      else if (/p4|بايورتي\s*4|أولوية\s*4/i.test(fullText)) priority = '⭐⭐';
-      else if (/p5|بايورتي\s*5|أولوية\s*5|فايف/i.test(fullText)) priority = '⭐';
+      if (/p1|priority\s*1|top\s*priority|أولوية\s*1|بايورتي\s*1|أولى/i.test(fullText)) priority = '⭐⭐⭐⭐⭐';
+      else if (/p2|priority\s*2|أولوية\s*2|بايورتي\s*2/i.test(fullText)) priority = '⭐⭐⭐⭐';
+      else if (/p4|priority\s*4|أولوية\s*4|بايورتي\s*4/i.test(fullText)) priority = '⭐⭐';
+      else if (/p5|priority\s*5|lowest\s*priority|أولوية\s*5|بايورتي\s*5|فايف/i.test(fullText)) priority = '⭐';
 
       // 3. القسم (Category)
       let cat = 'Tasks';
-      const cats = ['ديني', 'Sport', 'Study', 'Course', 'Date', 'Personal', 'Work'];
-      for (const c of cats) {
-        if (new RegExp('\\b' + c + '\\b|' + c, 'i').test(fullText)) { cat = c; break; }
+      const catsMap = [
+        { cat: 'ديني', re: /ديني|دين|صلاة|قرآن|deen|islamic|prayer/i },
+        { cat: 'Sport', re: /sport|gym|تمرينة|تمرين|جيم|رياضة|workout/i },
+        { cat: 'Study', re: /study|مذاكرة|مذاكره|درس|دراسة|exam|امتحان/i },
+        { cat: 'Course', re: /course|كورس|كورسات|محاضرة|lecture/i },
+        { cat: 'Date', re: /date|مشوار|خروجة|خروجه|لقاء|meeting|مقابلة|انترفيو/i },
+        { cat: 'Personal', re: /personal|شخصي|حاجة خاصة|private/i },
+        { cat: 'Work', re: /work|شغل|وظيفة|عميل|client|project|مشروع/i }
+      ];
+      for (const c of catsMap) {
+        if (c.re.test(fullText)) { cat = c.cat; break; }
       }
 
       // 4. فترة الصلاة
       let period = null;
-      if (/فجر|صبح/i.test(fullText)) period = 'fajr_dhuhr';
-      else if (/ظهر/i.test(fullText)) period = 'dhuhr_asr';
-      else if (/عصر/i.test(fullText)) period = 'asr_maghrib';
-      else if (/مغرب/i.test(fullText)) period = 'maghrib_isha';
-      else if (/عشاء|ليل/i.test(fullText)) period = 'isha_fajr';
+      if (/فجر|صبح|fajr|dawn|morning/i.test(fullText)) period = 'fajr_dhuhr';
+      else if (/ظهر|dhuhr|noon|midday/i.test(fullText)) period = 'dhuhr_asr';
+      else if (/عصر|asr|afternoon/i.test(fullText)) period = 'asr_maghrib';
+      else if (/مغرب|maghrib|sunset/i.test(fullText)) period = 'maghrib_isha';
+      else if (/عشاء|ليل|isha|night|evening/i.test(fullText)) period = 'isha_fajr';
 
       // 5. أهم 3 مهام (MIT)
       let mit = null;
-      const mitMatch = fullText.match(/(?:mit|أهم\s*(?:3|ثلاث)?\s*مهام)[:\s]+([^|;\n\r]+)/i);
+      const mitMatch = fullText.match(/(?:mit|top\s*3|أهم\s*(?:3|ثلاث)?\s*مهام)[:\s]+([^|;\n\r]+)/i);
       if (mitMatch) mit = mitMatch[1].trim();
 
       // 6. المصاريف المسجلة
       let expList = [];
-      const expMatches = [...fullText.matchAll(/(?:exp|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*([^|;\n\r]+)?/gi)];
+      const expMatches = [...fullText.matchAll(/(?:exp|expense|spent|paid|مصروف|صرفت)[:\s]+(\d+(?:\.\d+)?)\s*([^|;\n\r]+)?/gi)];
       for (const m of expMatches) {
         const amt = parseFloat(m[1]);
         const rawDesc = (m[2] || 'مصروف').trim();
         let expCat = 'أخرى';
-        if (/مواصلات/i.test(rawDesc)) expCat = 'مواصلات';
-        else if (/أكل|طعام|غدا|فطار|عشا/i.test(rawDesc)) expCat = 'أكل';
-        else if (/تعليم|كتب|كورس/i.test(rawDesc)) expCat = 'تعليم';
-        else if (/رياضة|جيم/i.test(rawDesc)) expCat = 'رياضة';
-        else if (/ترفيه/i.test(rawDesc)) expCat = 'ترفيه';
-        else if (/ملابس/i.test(rawDesc)) expCat = 'ملابس';
+        if (/مواصلات|uber|careem|taxi|bus|مترو|transport/i.test(rawDesc)) expCat = 'مواصلات';
+        else if (/أكل|طعام|غدا|فطار|عشا|food|lunch|dinner|breakfast|burger/i.test(rawDesc)) expCat = 'أكل';
+        else if (/تعليم|كتب|كورس|course|book/i.test(rawDesc)) expCat = 'تعليم';
+        else if (/رياضة|جيم|gym|creatine/i.test(rawDesc)) expCat = 'رياضة';
+        else if (/ترفيه|cinema|سينما|game/i.test(rawDesc)) expCat = 'ترفيه';
+        else if (/ملابس|clothes|shirt/i.test(rawDesc)) expCat = 'ملابس';
         expList.push({ amt, cat: expCat, desc: rawDesc });
       }
 
       // 7. الدخل الإضافي
       let incList = [];
-      const incMatches = [...fullText.matchAll(/(?:inc|دخل|دخل إضافي)[:\s]+(\d+(?:\.\d+)?)(?:\s*([^|;\n\r]+))?/gi)];
+      const incMatches = [...fullText.matchAll(/(?:inc|income|earned|دخل|دخل إضافي)[:\s]+(\d+(?:\.\d+)?)(?:\s*([^|;\n\r]+))?/gi)];
       for (const m of incMatches) {
         const amt = parseFloat(m[1]);
         const desc = (m[2] || 'دخل إضافي').trim();
@@ -2793,19 +2861,117 @@
 
       // تنظيف عنوان المهمة الأساسي
       let cleanLabel = title.split('|')[0]
-        .replace(/@\s*[\w\u0600-\u06FF\d-/]+/g, '')
-        .replace(/(?:بايورتي|أولوية|تجري|فترة|قسم)\s*[\w\u0600-\u06FF\d]+/gi, '')
+        .replace(/@[\s]*[a-zA-Z0-9_\u0600-\u06FF\/\-]+/g, '')
+        .replace(/(?:بايورتي|أولوية|تجري|فترة|قسم|priority|category)\s*[\w\u0600-\u06FF\d]+/gi, '')
+        .replace(/\b(on|at|in|for|يوم|فترة)\b/gi, '')
         .trim();
       if (!cleanLabel) cleanLabel = title.trim();
 
       return { dayIdx, cleanLabel, priority, cat, period, mit, expList, incList };
     }
 
-    // إدخال أو إملاء أمر صوتي ذكي لـ Spark مباشرة وتوزيعه في ثانية واحدة
-    function promptSparkCommand(prefilledText) {
-      const defaultText = prefilledText || "يوم 30 أكتوبر مهمة مقابلة البايورتي فايف تجري Date فترة العصر | MIT: 1. مراجعة مشروع 2. تمرين 3. قراءة | EXP: 40 مواصلات الشروق | INC: 400 دخل إضافي";
-      const cmd = prompt("🤖 أملِ أو اكتب لـ Spark ما تريده باللغة الطبيعية:\n\n(مثال: اليوم، المهمة، الأولوية، القسم، فترة الصلاة، أهم 3 مهام، المصاريف، الدخل)", defaultText);
-      if (!cmd || !cmd.trim()) return;
+    // فتح نافذة أمر Spark (فارغة تماماً ومجهزة للمايك أو الكتابة)
+    function promptSparkCommand() {
+      const modal = document.getElementById('spark-ai-modal');
+      const inputEl = document.getElementById('spark-cmd-input');
+      if (inputEl) inputEl.value = ''; // فارغة تماماً ليملاها المستخدم بنفسه
+      if (modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => { if (inputEl) inputEl.focus(); }, 100);
+      }
+    }
+
+    function closeSparkModal() {
+      const modal = document.getElementById('spark-ai-modal');
+      if (isSparkListening && sparkRecognition) {
+        try { sparkRecognition.stop(); } catch(e){}
+      }
+      if (modal) modal.style.display = 'none';
+    }
+
+    // التعرف الصوتي ثنائي اللغة (عربي وإنجليزي ومكس) عبر المايك
+    let sparkRecognition = null;
+    let isSparkListening = false;
+
+    function toggleSparkVoice() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("متصفحك لا يدعم خاصية التعرف الصوتي المباشر. يمكنك استخدام إملاء الصوت من كيبورد الهاتف أو استخدام متصفح Chrome أو Safari أو Edge.");
+        return;
+      }
+
+      const micBtn = document.getElementById('btn-spark-mic');
+      const micIcon = document.getElementById('spark-mic-icon');
+      const micTxt = document.getElementById('spark-mic-txt');
+      const statusBox = document.getElementById('spark-mic-status');
+      const statusTxt = document.getElementById('spark-mic-status-txt');
+      const inputEl = document.getElementById('spark-cmd-input');
+
+      if (isSparkListening) {
+        if (sparkRecognition) sparkRecognition.stop();
+        return;
+      }
+
+      try {
+        sparkRecognition = new SpeechRecognition();
+        sparkRecognition.continuous = false;
+        sparkRecognition.interimResults = true;
+        // اللهجة المصرية تدعم بامتياز خلط الكلمات العربية والإنجليزية (Code-switching)
+        sparkRecognition.lang = 'ar-EG';
+
+        sparkRecognition.onstart = () => {
+          isSparkListening = true;
+          if (micBtn) {
+            micBtn.style.background = '#e02424';
+            micBtn.style.borderColor = '#e02424';
+            micBtn.style.color = '#fff';
+          }
+          if (micIcon) micIcon.textContent = '⏹️';
+          if (micTxt) micTxt.textContent = 'إيقاف التسجيل';
+          if (statusBox) statusBox.style.display = 'flex';
+          if (statusTxt) statusTxt.textContent = 'جاري الاستماع... تحدث الآن (عربي أو English)';
+        };
+
+        sparkRecognition.onresult = (event) => {
+          let transcript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (inputEl) inputEl.value = transcript;
+        };
+
+        sparkRecognition.onerror = (event) => {
+          console.warn("Speech recognition error:", event.error);
+          if (statusTxt) statusTxt.textContent = 'تنبيه المايك: ' + event.error;
+        };
+
+        sparkRecognition.onend = () => {
+          isSparkListening = false;
+          if (micBtn) {
+            micBtn.style.background = 'rgba(255,77,0,0.15)';
+            micBtn.style.borderColor = '#FF4D00';
+            micBtn.style.color = '#FF4D00';
+          }
+          if (micIcon) micIcon.textContent = '🎙️';
+          if (micTxt) micTxt.textContent = 'تحدث بالصوت (Voice)';
+          if (statusBox) statusBox.style.display = 'none';
+        };
+
+        sparkRecognition.start();
+      } catch (err) {
+        console.error("Speech error:", err);
+        alert("تعذر تشغيل المايك: " + err.message);
+      }
+    }
+
+    // تنفيذ الأمر الصوتي/النصي من النافذة وتوزيعه في ثانية واحدة
+    function executeSparkCommandFromModal() {
+      const inputEl = document.getElementById('spark-cmd-input');
+      const cmd = inputEl ? inputEl.value.trim() : '';
+      if (!cmd) {
+        alert("يرجى كتابة أو تسجيل الأمر أولاً!");
+        return;
+      }
 
       const p = parseSmartSparkText(cmd, '', null);
       const targetDayIdx = p.dayIdx;
@@ -2844,12 +3010,13 @@
         S.inc[targetDayIdx] = totalAvailable;
       }
 
+      closeSparkModal();
       loadDay(targetDayIdx);
       updateSidebar();
       syncToCloud();
 
       const d = gd(targetDayIdx);
-      alert("✅ تم تنفيذ أمر Spark وتوزيع البيانات بنجاح!\n\n📅 اليوم: " + d.getDate() + " " + AR_M[d.getMonth()] + " " + d.getFullYear() + "\n📌 المهمة: " + p.cleanLabel + " (" + p.priority + ")\n📁 القسم: " + p.cat + "\n🕌 فترة الصلاة: " + (p.period ? PRAYER_PERIODS[p.period].name : 'بدون ربط') + "\n📝 MIT: " + (p.mit || '---') + "\n💸 مصاريف: " + (p.expList.length > 0 ? p.expList.map(x=>x.amt+'ج '+x.desc).join(', ') : 'لا يوجد') + "\n💵 دخل إضافي: " + (p.incList.length > 0 ? p.incList.map(x=>x.amt+'ج').join(', ') : 'لا يوجد'));
+      alert("✅ تم تنفيذ وتوزيع أمرك بنجاح!\n\n📅 اليوم: " + d.getDate() + " " + AR_M[d.getMonth()] + " " + d.getFullYear() + "\n📌 المهمة: " + p.cleanLabel + " (" + p.priority + ")\n📁 القسم: " + p.cat + "\n🕌 فترة الصلاة: " + (p.period ? PRAYER_PERIODS[p.period].name : 'بدون ربط') + "\n📝 MIT: " + (p.mit || '---') + "\n💸 مصاريف: " + (p.expList.length > 0 ? p.expList.map(x=>x.amt+'ج '+x.desc).join(', ') : 'لا يوجد') + "\n💵 دخل إضافي: " + (p.incList.length > 0 ? p.incList.map(x=>x.amt+'ج').join(', ') : 'لا يوجد'));
     }
 
     // مزامنة مهام Spark (Google Tasks) مع DSRPT Tasks وتوزيع البيانات تلقائياً

@@ -1868,16 +1868,22 @@
 
   
     /* --- تثبيت الشاشة وتجربة تطبيق أصيل (Native App Feel) --- */
-    html, body {
+    html {
+      height: 100%;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      scroll-behavior: smooth;
+      -webkit-text-size-adjust: 100%;
+    }
+    body {
+      min-height: 100vh;
       width: 100% !important;
       max-width: 100vw !important;
+      overflow-y: visible !important;
       overflow-x: hidden !important;
       position: relative;
       touch-action: pan-y !important;
-      -webkit-touch-callout: none !important;
-      -webkit-user-select: none !important;
-      user-select: none !important;
-      overscroll-behavior-y: none !important;
+      -webkit-overflow-scrolling: touch;
     }
     input, textarea, select {
       -webkit-user-select: text !important;
@@ -2304,16 +2310,48 @@
                   </div>
                 </div>
 
-                <div class="income-row">
-                  <span class="income-label">💵 دخل اليوم الإجمالي:</span>
-                  <input class="income-input" id="income-input" type="number" placeholder="0"
-                    oninput="saveIncome(this.value)">
-                </div>
-                <div id="rollover-indicator" style="font-size:11px; color:#00ff88; margin-top:2px; margin-bottom:4px; font-weight:700; display:none;"></div>
+                <!-- تفصيل الدخل: مرحّل من الأمس + دخل اليوم الأساسي + الدخول الإضافية -->
+                <div class="income-breakdown-box" style="background:var(--card2); border:1px solid var(--border); border-radius:6px; padding:12px; margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+                  
+                  <!-- 1. مرحل من الأمس -->
+                  <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--text2); display:flex; align-items:center; gap:5px; font-weight:600;">
+                      🔄 مرحّل من متبقي الأمس:
+                    </span>
+                    <span id="rollover-val" style="font-family:'Space Mono', monospace; font-size:12px; font-weight:800; color:#00ff88;">0 ج</span>
+                  </div>
 
-                <div class="remain-row">
-                  <span class="remain-label">💰 المتبقي من اليوم:</span>
-                  <span class="remain-val" id="remain-val" style="color:var(--green)">0 ج</span>
+                  <!-- 2. دخل اليوم الأساسي -->
+                  <div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--text); display:flex; align-items:center; gap:5px; font-weight:700;">
+                      💵 دخل اليوم (أساسي):
+                    </span>
+                    <input class="income-input" id="base-income-input" type="number" placeholder="0"
+                      style="width:90px; padding:4px 8px; font-size:12px; text-align:center; font-family:'Space Mono', monospace; background:var(--card); border:1px solid var(--border); border-radius:4px; color:var(--text);"
+                      oninput="saveBaseIncome(this.value)">
+                  </div>
+
+                  <!-- 3. مجموع الدخول الإضافية المسجلة -->
+                  <div id="extra-income-row" style="display:none; align-items:center; justify-content:space-between; font-size:12px;">
+                    <span style="color:#00ff88; display:flex; align-items:center; gap:5px; font-weight:600;">
+                      🟢 مجموع الدخول الإضافية:
+                    </span>
+                    <span id="extra-income-val" style="font-family:'Space Mono', monospace; font-size:12px; font-weight:800; color:#00ff88;">+0 ج</span>
+                  </div>
+
+                  <!-- 4. إجمالي الدخل المتاح لليوم -->
+                  <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px dashed var(--border2); padding-top:8px; margin-top:2px; font-size:12px;">
+                    <span style="color:var(--gold); font-weight:800; display:flex; align-items:center; gap:4px;">
+                      ⚡ إجمالي الدخل المتاح اليوم:
+                    </span>
+                    <span id="total-income-val" style="font-family:'Space Mono', monospace; font-size:13px; font-weight:900; color:var(--gold);">0 ج</span>
+                  </div>
+                </div>
+
+                <!-- المتبقي الصافي من اليوم بعد خصم المصاريف -->
+                <div class="remain-row" style="margin-top:10px; padding:10px 0 4px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
+                  <span class="remain-label" style="font-size:13px; font-weight:900;">💰 المتبقي الصافي من اليوم:</span>
+                  <span class="remain-val" id="remain-val" style="font-family:'Space Mono', monospace; font-weight:900; font-size:15px; color:var(--green)">0 ج</span>
                 </div>
               </div>
             </div>
@@ -2483,6 +2521,7 @@
       notes: {},
       exp: {},
       inc: {},
+      baseInc: {},         // دخل اليوم الأساسي (الراتب/اليومية)
       extraInc: {},        // الدخول الإضافية المسجلة خلال اليوم
       rolloverFrom: {},    // المبالغ المرحلة من الأيام السابقة
       saved: {},
@@ -2511,7 +2550,7 @@
           }
         }
         if (bestCache) {
-          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'extraInc', 'rolloverFrom', 'saved'].forEach(k => {
+          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'baseInc', 'extraInc', 'rolloverFrom', 'saved'].forEach(k => {
             if (bestCache[k]) S[k] = Object.assign({}, S[k] || {}, bestCache[k]);
           });
           if (bestCache.globalCourses && bestCache.globalCourses.length) {
@@ -2673,6 +2712,7 @@
           notes: S.notes,
           exp: S.exp,
           inc: S.inc,
+          baseInc: S.baseInc,
           extraInc: S.extraInc,
           rolloverFrom: S.rolloverFrom,
           saved: S.saved,
@@ -2702,7 +2742,7 @@
       docRef.onSnapshot(doc => {
         if (doc.exists) {
           const data = doc.data();
-          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'extraInc', 'rolloverFrom', 'saved'].forEach(k => {
+          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'baseInc', 'extraInc', 'rolloverFrom', 'saved'].forEach(k => {
             // دمج ذكي مع البيانات المحلية لمنع تصفير أي يوم
             S[k] = Object.assign({}, S[k] || {}, data[k] || {});
           });
@@ -2834,17 +2874,20 @@
       if (idx > 0 && S.saved[idx - 1]) {
         const prevRemain = calcDayRemain(idx - 1);
         if (!S.rolloverFrom) S.rolloverFrom = {};
-        // إذا كان دخل اليوم غير محدد بعد أو 0، يرث متبقي الأمس
-        if (S.inc[idx] === undefined || (S.inc[idx] === 0 && (!S.rolloverFrom[idx] || S.rolloverFrom[idx] === 0))) {
-          if (prevRemain > 0) {
-            S.rolloverFrom[idx] = prevRemain;
-            S.inc[idx] = prevRemain;
-          }
+        if (prevRemain > 0) {
+          S.rolloverFrom[idx] = prevRemain;
         }
       }
 
-      const incInp = document.getElementById('income-input');
-      if (incInp) incInp.value = (S.inc[idx] !== undefined && S.inc[idx] !== null) ? S.inc[idx] : '';
+      // معالجة البيانات السابقة لو كان الدخل مسجلاً في S.inc القديم ولم يكن في baseInc
+      if (S.baseInc === undefined) S.baseInc = {};
+      if (S.baseInc[idx] === undefined && S.inc && S.inc[idx]) {
+        const roll = S.rolloverFrom && S.rolloverFrom[idx] ? S.rolloverFrom[idx] : 0;
+        const extras = (S.extraInc && S.extraInc[idx]) ? S.extraInc[idx].reduce((s, e) => s + (parseFloat(e.amt) || 0), 0) : 0;
+        const legacy = (parseFloat(S.inc[idx]) || 0) - roll - extras;
+        if (legacy > 0) S.baseInc[idx] = legacy;
+      }
+
       renderExp(idx);
 
       const btn = document.getElementById('save-day-btn');
@@ -3399,10 +3442,9 @@
         if (!S.extraInc[idx]) S.extraInc[idx] = [];
         S.extraInc[idx].push({ id: Date.now() + Math.random(), desc: desc, amt: amt, cat: cat });
 
-        // تحويل أوتوماتيكي للدخل (مثلاً من 500 إلى 700 جنيه)
-        S.inc[idx] = (parseFloat(S.inc[idx]) || 0) + amt;
-        const incInp = document.getElementById('income-input');
-        if (incInp) incInp.value = S.inc[idx];
+        // تحديث إجمالي الدخل المتاح تلقائياً
+        const { totalAvailable } = getDayIncomeDetails(idx);
+        S.inc[idx] = totalAvailable;
       }
 
       descInp.value = '';
@@ -3425,14 +3467,9 @@
 
     function delIncomeItem(idx, eid) {
       if (!S.extraInc || !S.extraInc[idx]) return;
-      const item = S.extraInc[idx].find(e => e.id === eid);
-      if (item) {
-        // خصم المبلغ المحذوف من إجمالي دخل اليوم
-        S.inc[idx] = Math.max(0, (parseFloat(S.inc[idx]) || 0) - item.amt);
-        const incInp = document.getElementById('income-input');
-        if (incInp) incInp.value = S.inc[idx];
-      }
       S.extraInc[idx] = S.extraInc[idx].filter(e => e.id !== eid);
+      const { totalAvailable } = getDayIncomeDetails(idx);
+      S.inc[idx] = totalAvailable;
       renderExp(idx);
       syncToCloud();
     }
@@ -3477,23 +3514,42 @@
         }
       }
 
-      const income = parseFloat(S.inc[idx]) || 0;
-      const remain = income - totalExp;
+      // جلب التفاصيل الثلاثة: مرحل من الأمس، دخل أساسي، دخول إضافية
+      const { rollover, baseInc, extraTotal, totalAvailable } = getDayIncomeDetails(idx);
+      S.inc[idx] = totalAvailable;
+
+      // 1. تحديث قيمة مرحل من الأمس
+      const rollEl = document.getElementById('rollover-val');
+      if (rollEl) rollEl.textContent = rollover.toLocaleString() + ' ج';
+
+      // 2. تحديث خانة دخل اليوم الأساسي
+      const baseInp = document.getElementById('base-income-input');
+      if (baseInp && document.activeElement !== baseInp) {
+        baseInp.value = baseInc > 0 ? baseInc : '';
+      }
+
+      // 3. تحديث خانة مجموع الدخول الإضافية
+      const extraRow = document.getElementById('extra-income-row');
+      const extraVal = document.getElementById('extra-income-val');
+      if (extraRow && extraVal) {
+        if (extraTotal > 0) {
+          extraRow.style.display = 'flex';
+          extraVal.textContent = '+' + extraTotal.toLocaleString() + ' ج';
+        } else {
+          extraRow.style.display = 'none';
+        }
+      }
+
+      // 4. تحديث إجمالي الدخل المتاح لليوم
+      const totalIncEl = document.getElementById('total-income-val');
+      if (totalIncEl) totalIncEl.textContent = totalAvailable.toLocaleString() + ' ج';
+
+      // 5. حساب المتبقي الصافي من اليوم
+      const remain = totalAvailable - totalExp;
       const remainEl = document.getElementById('remain-val');
       if (remainEl) {
         remainEl.textContent = remain.toLocaleString() + ' ج';
         remainEl.style.color = remain >= 0 ? 'var(--green)' : 'var(--red)';
-      }
-
-      // إشعار الترحيل من متبقي الأمس
-      const rollInd = document.getElementById('rollover-indicator');
-      if (rollInd) {
-        if (idx > 0 && S.rolloverFrom && S.rolloverFrom[idx] !== undefined && S.rolloverFrom[idx] > 0) {
-          rollInd.textContent = `🔄 مرحّل تلقائياً من متبقي الأمس: ${S.rolloverFrom[idx].toLocaleString()} ج`;
-          rollInd.style.display = 'block';
-        } else {
-          rollInd.style.display = 'none';
-        }
       }
     }
 
@@ -3503,31 +3559,51 @@
       syncToCloud();
     }
 
-    // حساب المتبقي لأي يوم محدد
-    function calcDayRemain(idx) {
-      const inc = parseFloat(S.inc[idx]) || 0;
-      const exps = S.exp[idx] || [];
-      const totalExp = exps.reduce((s, e) => s + e.amt, 0);
-      return inc - totalExp;
+    // حساب تفاصيل الدخل الثلاثة بشكل منفصل ومستقل تماماً
+    function getDayIncomeDetails(idx) {
+      const rollover = (S.rolloverFrom && S.rolloverFrom[idx] !== undefined) ? (parseFloat(S.rolloverFrom[idx]) || 0) : 0;
+      const baseInc = (S.baseInc && S.baseInc[idx] !== undefined) ? (parseFloat(S.baseInc[idx]) || 0) : 0;
+      const extraList = (S.extraInc && S.extraInc[idx]) ? S.extraInc[idx] : [];
+      const extraTotal = extraList.reduce((sum, e) => sum + (parseFloat(e.amt) || 0), 0);
+      const totalAvailable = rollover + baseInc + extraTotal;
+      return { rollover, baseInc, extraTotal, totalAvailable };
     }
 
-    // حفظ وإنهاء اليوم مع ترحيل المتبقي لليوم التالي أوتوماتيكياً
+    // حساب المتبقي الفعلي من اليوم (إجمالي المتاح - إجمالي المصاريف)
+    function calcDayRemain(idx) {
+      const { totalAvailable } = getDayIncomeDetails(idx);
+      const exps = S.exp[idx] || [];
+      const totalExp = exps.reduce((s, e) => s + (parseFloat(e.amt) || 0), 0);
+      return totalAvailable - totalExp;
+    }
+
+    // حفظ دخل اليوم الأساسي دون المساس بالمرحل من الأمس أو الدخول الإضافية
+    function saveBaseIncome(v) {
+      if (!S.baseInc) S.baseInc = {};
+      S.baseInc[S.cur] = parseFloat(v) || 0;
+      const { totalAvailable } = getDayIncomeDetails(S.cur);
+      S.inc[S.cur] = totalAvailable; // تحديث الإجمالي للتوافق
+      renderExp(S.cur);
+      syncToCloud();
+    }
+
+    // للتوافق مع أي استدعاءات قديمة
+    function saveIncome(v) {
+      saveBaseIncome(v);
+    }
+
+    // حفظ وإنهاء اليوم مع ترحيل المتبقي الفعلي لليوم التالي
     function saveDay() {
       const idx = S.cur;
       S.saved[idx] = !S.saved[idx];
 
-      // إذا تم وضع علامة الإنجاز لليوم
+      // إذا تم وضع علامة الإنجاز لليوم، يترحل المتبقي إلى اليوم التالي
       if (S.saved[idx]) {
         const remain = calcDayRemain(idx);
         const nextIdx = idx + 1;
         if (nextIdx < NUM_DAYS) {
           if (!S.rolloverFrom) S.rolloverFrom = {};
-          // ترحيل المتبقي لليوم التالي
           S.rolloverFrom[nextIdx] = Math.max(0, remain);
-          // إذا كان اليوم التالي ليس له دخل بعد أو كان مأخوذاً من ترحيل سابق
-          if (S.inc[nextIdx] === undefined || S.inc[nextIdx] === 0 || S.rolloverFrom[nextIdx] !== undefined) {
-            S.inc[nextIdx] = Math.max(0, remain);
-          }
         }
       }
 
@@ -3722,13 +3798,21 @@
               catTotals[cat] = (catTotals[cat] || 0) + e.amt;
             });
           }
-          if (S.inc[dayIdx]) {
-            const rawInc = parseFloat(S.inc[dayIdx]) || 0;
-            const rollVal = (S.rolloverFrom && S.rolloverFrom[dayIdx] !== undefined) ? (parseFloat(S.rolloverFrom[dayIdx]) || 0) : 0;
-            // الدخل الفعلي الجديد = إجمالي دخل اليوم ناقص ما تم ترحيله من الأمس لمنع احتساب نفس الفلوس مرتين
-            dayRealInc = Math.max(0, rawInc - rollVal);
-            totalRolloverIgnored += rollVal;
+          // الدخل الحقيقي الجديد للشهر هو فقط ما تم تحقيقه جديداً (الدخل الأساسي + الدخول الإضافية)
+          // دون إعادة جمع الأرصدة التي ترحلت من الأيام السابقة
+          const base = (S.baseInc && S.baseInc[dayIdx] !== undefined) ? (parseFloat(S.baseInc[dayIdx]) || 0) : 0;
+          const extras = (S.extraInc && S.extraInc[dayIdx]) ? S.extraInc[dayIdx].reduce((s, e) => s + (parseFloat(e.amt) || 0), 0) : 0;
+          const legacyInc = parseFloat(S.inc[dayIdx]) || 0;
+          const rollVal = (S.rolloverFrom && S.rolloverFrom[dayIdx] !== undefined) ? (parseFloat(S.rolloverFrom[dayIdx]) || 0) : 0;
+
+          if (base > 0 || extras > 0) {
+            dayRealInc = base + extras;
+          } else if (legacyInc > rollVal) {
+            dayRealInc = legacyInc - rollVal;
+          } else {
+            dayRealInc = 0;
           }
+          totalRolloverIgnored += rollVal;
         }
 
         if (dayExp > 0) {
@@ -3922,20 +4006,7 @@
     }
 
     
-    // حماية تامة ضد الزووم العشوائي وحركات التكبير في الهواتف
-    document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
-    document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
-    document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', function(e) {
-      const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        if (!['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
-          e.preventDefault();
-        }
-      }
-      lastTouchEnd = now;
-    }, { passive: false });
+
 
     window.onload = function () {
       // 1. استرجاع فوري من الذاكرة المحلية كخط دفاع أول ضد التصفير

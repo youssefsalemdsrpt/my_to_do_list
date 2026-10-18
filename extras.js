@@ -7,11 +7,11 @@
   S.settings = S.settings || {};
   let loaded = false, pending = false, timer, installEvt;
   const cfg = () => Object.assign({ on: false, morning: '08:00', evening: '21:00', limit: 0, done: false }, S.settings);
-  const payload = () => ({ tasks: S.tasks, dayTasks: S.dayTasks, taskLinks: S.taskLinks, weekGoals: S.weekGoals, notes: S.notes, exp: S.exp, inc: S.inc, extraInc: S.extraInc, rolloverFrom: S.rolloverFrom, saved: S.saved, globalCourses: S.globalCourses, savedCoursesBackup: S.savedCoursesBackup, settings: S.settings });
+  const payload = () => ({ tasks: S.tasks, dayTasks: S.dayTasks, taskLinks: S.taskLinks, weekGoals: S.weekGoals, notes: S.notes, exp: S.exp, inc: S.inc, baseInc: S.baseInc, extraInc: S.extraInc, rolloverFrom: S.rolloverFrom, saved: S.saved, globalCourses: S.globalCourses, savedCoursesBackup: S.savedCoursesBackup, settings: S.settings });
 
   /* ---------- CSS ---------- */
   document.head.insertAdjacentHTML('beforeend', `<style>
-  html{-webkit-text-size-adjust:100%}body{touch-action:pan-y!important;overflow-x:hidden!important;-webkit-user-select:none!important;user-select:none!important;}
+  html{overflow-y:auto!important;overflow-x:hidden!important;-webkit-text-size-adjust:100%}body{overflow-y:visible!important;overflow-x:hidden!important;touch-action:pan-y!important;}
   #alerts .al{background:rgba(255,77,0,.1);border:1px solid rgba(255,77,0,.35);color:#ffb08a;border-radius:6px;padding:9px 14px;margin-bottom:8px;font-size:12px;font-weight:700}
   #toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid #FF4D00;color:#F5F0EB;padding:10px 16px;border-radius:8px;font-size:12px;font-weight:700;z-index:9999999;max-width:90%;display:none;text-align:center}
   #offline-bar{display:none;position:sticky;top:0;z-index:200;background:#f39c12;color:#0a0a0a;text-align:center;font-size:12px;font-weight:800;padding:6px}
@@ -48,9 +48,8 @@
   document.body.insertAdjacentHTML('beforeend', '<div id="toast"></div><div id="print-root"></div>');
   $('dsrpt-x') || document.querySelector('.main').insertAdjacentHTML('afterbegin', '<div id="offline-bar">📴 أنت أوفلاين — كل حاجة بتتحفظ على جهازك وهتتزامن لما النت يرجع</div>');
 
-  /* ---------- قفل الزوم ---------- */
+  /* ---------- قفل الزوم الآمن دون تعطيل التمرير ---------- */
   ['gesturestart','gesturechange','gestureend'].forEach(e => document.addEventListener(e, ev => ev.preventDefault()));
-  document.addEventListener('touchmove', ev => { if (ev.touches.length > 1) ev.preventDefault(); }, { passive: false });
 
   /* ---------- الحالة والأوفلاين ---------- */
   function status(m) {
@@ -79,7 +78,7 @@
       let reseed = false;
       if (doc.exists) {
         const d = doc.data();
-        ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'extraInc', 'rolloverFrom', 'saved', 'settings'].forEach(k => S[k] = d[k] || S[k] || {});
+        ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'baseInc', 'extraInc', 'rolloverFrom', 'saved', 'settings'].forEach(k => S[k] = d[k] || S[k] || {});
         S.globalCourses = (d.globalCourses && d.globalCourses.length) ? d.globalCourses : (me ? [...SAVED_COURSES] : []);
         if (me && !(d.globalCourses && d.globalCourses.length)) reseed = true;
       } else {

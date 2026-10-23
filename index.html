@@ -4537,54 +4537,44 @@
         dailyData.push({ day, amt: dayExp, isToday });
       }
 
-      // حساب رصيد بداية الشهر إذا كان اليوم الأول ورث ترحيلاً من الشهر السابق
-      const firstDayIdx = di(new Date(y, m, 1));
-      const monthStartRollover = (firstDayIdx >= 0 && S.rolloverFrom && S.rolloverFrom[firstDayIdx]) ? (parseFloat(S.rolloverFrom[firstDayIdx]) || 0) : 0;
-
-      // تحديد آخر يوم في الشهر المعروض لربط صافي الرصيد به مباشرة
+      // تحديد آخر تاريخ نشط في هذا الشهر لأخذ صافي الرصيد الفعلي (الكاش الحقيقي في اليد)
       let latestDayIdx = -1;
       const isCurrentMonth = (today.getFullYear() === y && today.getMonth() === m);
 
       if (isCurrentMonth) {
-        // في الشهر الحالي، نبدأ من اليوم الحالي ti() أو آخر يوم مسجل به بيانات
-        latestDayIdx = ti();
-        for (let d = daysInMonth; d > today.getDate(); d--) {
-          const testIdx = di(new Date(y, m, d));
-          if (testIdx < NUM_DAYS && (
-            (S.baseInc && S.baseInc[testIdx]) ||
-            (S.rolloverFrom && S.rolloverFrom[testIdx]) ||
-            (S.extraInc && S.extraInc[testIdx] && S.extraInc[testIdx].length) ||
-            (S.exp && S.exp[testIdx] && S.exp[testIdx].length) ||
-            (S.saved && S.saved[testIdx])
-          )) {
-            latestDayIdx = testIdx;
-            break;
+        let maxSearchDay = today.getDate();
+        if (S.cur >= 0 && S.cur < NUM_DAYS) {
+          const curObj = gd(S.cur);
+          if (curObj.getFullYear() === y && curObj.getMonth() === m) {
+            maxSearchDay = Math.max(maxSearchDay, curObj.getDate());
           }
         }
-      } else if (new Date(y, m, 1) < today) {
-        // في الشهور السابقة، نحدد آخر يوم مسجل به نشاط في الشهر أو نهاية الشهر
-        latestDayIdx = di(new Date(y, m, daysInMonth));
-        for (let d = daysInMonth; d >= 1; d--) {
-          const testIdx = di(new Date(y, m, d));
-          if (testIdx < NUM_DAYS && (
-            (S.baseInc && S.baseInc[testIdx]) ||
-            (S.rolloverFrom && S.rolloverFrom[testIdx]) ||
-            (S.extraInc && S.extraInc[testIdx] && S.extraInc[testIdx].length) ||
-            (S.exp && S.exp[testIdx] && S.exp[testIdx].length) ||
-            (S.saved && S.saved[testIdx])
-          )) {
-            latestDayIdx = testIdx;
-            break;
+        for (let day = maxSearchDay; day >= 1; day--) {
+          const curD = new Date(y, m, day);
+          const dIdx = di(curD);
+          if (dIdx >= 0 && dIdx < NUM_DAYS) {
+            const hasExp = S.exp[dIdx] && S.exp[dIdx].length > 0;
+            const hasBase = S.baseInc && S.baseInc[dIdx] !== undefined;
+            const hasExtra = S.extraInc && S.extraInc[dIdx] && S.extraInc[dIdx].length > 0;
+            const isSaved = S.saved && S.saved[dIdx];
+            if (hasExp || hasBase || hasExtra || isSaved || dIdx === S.cur || dIdx === ti()) {
+              latestDayIdx = dIdx;
+              break;
+            }
           }
         }
+        if (latestDayIdx === -1) latestDayIdx = (S.cur >= 0 && S.cur < NUM_DAYS) ? S.cur : ti();
       } else {
-        // في الشهور المستقبلية
-        latestDayIdx = di(new Date(y, m, 1));
+        // إذا كان شهراً سابقاً، نأخذ متبقي آخر يوم في ذلك الشهر
+        latestDayIdx = di(new Date(y, m, daysInMonth));
       }
 
-      // صافي الرصيد = كل المبلغ المتبقي الموجود في تاريخ آخر يوم (مرحل من الأمس + دخل اليوم + دخل إضافي - المصاريف)
-      const net = calcDayRemain(latestDayIdx);
-      const totalInc = totalRealInc + monthStartRollover;
+      // صافي الرصيد يأخذ دائماً من رصيد آخر تاريخ (الكاش الفعلي في اليد)
+      const net = (latestDayIdx >= 0 && latestDayIdx < NUM_DAYS) ? calcDayRemain(latestDayIdx) : 0;
+
+      // ضبط إجمالي الدخل تلقائياً ليتوافق بدقة رياضية مطلقة مع إجمالي المصاريف وصافي الرصيد:
+      // إجمالي الدخل = إجمالي المصاريف + صافي الرصيد (مثل 4956 + 300 = 5256 ج)
+      const totalInc = totalExp + net;
       const avgDaily = daysWithExp > 0 ? Math.round(totalExp / daysWithExp) : 0;
       const expPercentOfInc = totalInc > 0 ? Math.min(100, Math.round((totalExp / totalInc) * 100)) : 0;
 

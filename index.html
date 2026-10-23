@@ -2308,6 +2308,13 @@
                       <option value="ملابس">👕 ملابس</option>
                       <option value="أخرى">📦 أخرى</option>
                     </select>
+
+                    <select class="exp-add-select" id="exp-wallet" style="max-width:125px; font-weight:700;" title="المحفظة / طريقة الدفع">
+                      <option value="cash">💵 كاش</option>
+                      <option value="instapay">⚡ إنستاباي</option>
+                      <option value="debit">💳 ديبت كارد</option>
+                    </select>
+
                     <button class="exp-add-btn" id="exp-submit-btn" onclick="addExpenseOrIncome()">+ إضافة مصروف</button>
                   </div>
                 </div>
@@ -2350,10 +2357,56 @@
                   </div>
                 </div>
 
-                <!-- المتبقي الصافي من اليوم بعد خصم المصاريف -->
-                <div class="remain-row" style="margin-top:10px; padding:10px 0 4px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between;">
-                  <span class="remain-label" style="font-size:13px; font-weight:900;">💰 المتبقي الصافي من اليوم:</span>
-                  <span class="remain-val" id="remain-val" style="font-family:'Space Mono', monospace; font-weight:900; font-size:15px; color:var(--green)">0 ج</span>
+                <!-- المتبقي الصافي من اليوم مقسم على 3 محافظ (InstaPay / Debit Card / Cash) -->
+                <div class="wallets-remain-box" style="margin-top:12px; padding:12px; background:var(--card2); border:1px solid var(--border); border-radius:6px; display:flex; flex-direction:column; gap:10px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                    <span style="font-size:13px; font-weight:900; color:var(--text); display:flex; align-items:center; gap:6px;">
+                      💰 المتبقي الصافي من اليوم:
+                    </span>
+                    <span class="remain-val" id="remain-val" style="font-family:'Space Mono', monospace; font-weight:900; font-size:16px; color:var(--green)">0 ج</span>
+                  </div>
+
+                  <div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                      <span style="font-size:10.5px; font-weight:700; color:var(--muted); font-family:'Space Mono', monospace; letter-spacing:0.5px;">
+                        👛 المحافظ (3 Wallets) — اضغط للتعديل:
+                      </span>
+                      <button type="button" onclick="promptSplitWallets()" style="background:transparent; border:none; color:var(--gold); font-size:11px; font-weight:700; cursor:pointer; font-family:'Cairo', sans-serif;">
+                        ⚙️ توزيع الأرصدة
+                      </button>
+                    </div>
+
+                    <div class="wallets-grid" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                      
+                      <!-- 1. InstaPay إنستاباي -->
+                      <div class="wallet-card" onclick="editWalletBalance('instapay')" style="background:var(--card); border:1px solid rgba(168, 85, 247, 0.35); border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.2s;" title="اضغط لتعديل رصيد إنستاباي">
+                        <div style="font-size:11px; font-weight:800; color:#c084fc; display:flex; align-items:center; justify-content:center; gap:3px;">
+                          <span>⚡</span> إنستاباي
+                        </div>
+                        <div id="wallet-val-instapay" style="font-family:'Space Mono', monospace; font-size:13.5px; font-weight:900; color:#c084fc; margin-top:3px;">0 ج</div>
+                        <div style="font-size:8.5px; color:var(--muted); margin-top:2px; font-family:'Space Mono', monospace;">InstaPay ✏️</div>
+                      </div>
+
+                      <!-- 2. Debit Card ديبت كارد -->
+                      <div class="wallet-card" onclick="editWalletBalance('debit')" style="background:var(--card); border:1px solid rgba(52, 152, 219, 0.35); border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.2s;" title="اضغط لتعديل رصيد ديبت كارد">
+                        <div style="font-size:11px; font-weight:800; color:#3498db; display:flex; align-items:center; justify-content:center; gap:3px;">
+                          <span>💳</span> ديبت كارد
+                        </div>
+                        <div id="wallet-val-debit" style="font-family:'Space Mono', monospace; font-size:13.5px; font-weight:900; color:#3498db; margin-top:3px;">0 ج</div>
+                        <div style="font-size:8.5px; color:var(--muted); margin-top:2px; font-family:'Space Mono', monospace;">Debit Card ✏️</div>
+                      </div>
+
+                      <!-- 3. Cash كاش -->
+                      <div class="wallet-card" onclick="editWalletBalance('cash')" style="background:var(--card); border:1px solid rgba(0, 255, 136, 0.35); border-radius:6px; padding:8px 6px; text-align:center; cursor:pointer; transition:all 0.2s;" title="اضغط لتعديل رصيد كاش">
+                        <div style="font-size:11px; font-weight:800; color:#00ff88; display:flex; align-items:center; justify-content:center; gap:3px;">
+                          <span>💵</span> كاش
+                        </div>
+                        <div id="wallet-val-cash" style="font-family:'Space Mono', monospace; font-size:13.5px; font-weight:900; color:#00ff88; margin-top:3px;">0 ج</div>
+                        <div style="font-size:8.5px; color:var(--muted); margin-top:2px; font-family:'Space Mono', monospace;">Cash ✏️</div>
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2586,7 +2639,9 @@
       rolloverFrom: {},    // المبالغ المرحلة من الأيام السابقة
       saved: {},
       globalCourses: [],
-      savedCoursesBackup: []
+      savedCoursesBackup: [],
+      walletsBase: {},     // التوزيع الأساسي للمحافظ لكل يوم { cash, instapay, debit }
+      walletRollover: {}   // ترحيل كل محفظة على حدة { cash, instapay, debit }
     };
 
     // استرجاع فوري من ذاكرة المتصفح لمنع التصفير
@@ -2610,7 +2665,7 @@
           }
         }
         if (bestCache) {
-          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'baseInc', 'extraInc', 'rolloverFrom', 'saved'].forEach(k => {
+          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'baseInc', 'extraInc', 'rolloverFrom', 'saved', 'walletsBase', 'walletRollover'].forEach(k => {
             if (bestCache[k]) S[k] = Object.assign({}, S[k] || {}, bestCache[k]);
           });
           if (bestCache.globalCourses && bestCache.globalCourses.length) {
@@ -2934,7 +2989,7 @@
         if (!desc || desc === 'دخل إضافي' || desc === 'دخل اضافي' || desc === 'دخل') {
           desc = 'دخل إضافي';
         }
-        incList.push({ amt, cat: 'دخل إضافي', desc });
+        incList.push({ amt, cat: 'دخل إضافي', desc, wallet: getWalletKey(null, 'دخل إضافي', desc) });
       }
 
       if (incList.length === 0) {
@@ -2944,7 +2999,7 @@
           const amt = parseFloat(m[1]);
           let desc = (m[2] || '').trim().replace(/^(?:من|في\s+(?:المصاريف|الدخل)|في|بـ|ب)\s*/i, '').trim();
           if (!desc) desc = 'دخل إضافي';
-          incList.push({ amt, cat: 'دخل إضافي', desc });
+          incList.push({ amt, cat: 'دخل إضافي', desc, wallet: getWalletKey(null, 'دخل إضافي', desc) });
         }
       }
 
@@ -2965,7 +3020,7 @@
           const amt = parseFloat(m[1]);
           let rawDesc = (m[2] || '').trim().replace(/^(?:في|بـ|ب|جنيه|جنية|ج)\s*/i, '');
           const expCat = categorizeExpense(rawDesc);
-          expList.push({ amt, cat: expCat, desc: rawDesc || (expCat !== 'أخرى' ? expCat : 'مصروف') });
+          expList.push({ amt, cat: expCat, desc: rawDesc || (expCat !== 'أخرى' ? expCat : 'مصروف'), wallet: getWalletKey(null, expCat, rawDesc) });
         }
 
         // صيغة 2: اعمل حاجه في المصاريف X جنيه Y أو سجل في المصاريف X جنيه Y
@@ -3319,7 +3374,7 @@
       if (p.expList && p.expList.length > 0) {
         if (!S.exp[targetDayIdx]) S.exp[targetDayIdx] = [];
         p.expList.forEach(e => {
-          S.exp[targetDayIdx].push({ id: Date.now() + Math.random(), desc: e.desc, amt: e.amt, cat: e.cat });
+          S.exp[targetDayIdx].push({ id: Date.now() + Math.random(), desc: e.desc, amt: e.amt, cat: e.cat, wallet: e.wallet || getWalletKey(null, e.cat, e.desc) });
         });
       }
 
@@ -3327,7 +3382,7 @@
         if (!S.extraInc) S.extraInc = {};
         if (!S.extraInc[targetDayIdx]) S.extraInc[targetDayIdx] = [];
         p.incList.forEach(e => {
-          S.extraInc[targetDayIdx].push({ id: Date.now() + Math.random(), desc: e.desc, amt: e.amt, cat: e.cat });
+          S.extraInc[targetDayIdx].push({ id: Date.now() + Math.random(), desc: e.desc, amt: e.amt, cat: e.cat, wallet: e.wallet || getWalletKey(null, e.cat, e.desc) });
         });
         const { totalAvailable } = getDayIncomeDetails(targetDayIdx);
         S.inc[targetDayIdx] = totalAvailable;
@@ -3386,7 +3441,9 @@
           rolloverFrom: S.rolloverFrom,
           saved: S.saved,
           globalCourses: S.globalCourses,
-          savedCoursesBackup: S.savedCoursesBackup
+          savedCoursesBackup: S.savedCoursesBackup,
+          walletsBase: S.walletsBase,
+          walletRollover: S.walletRollover
         };
 
         docRef.set(payload, { merge: true }).then(() => {
@@ -3411,7 +3468,7 @@
       docRef.onSnapshot(doc => {
         if (doc.exists) {
           const data = doc.data();
-          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'baseInc', 'extraInc', 'rolloverFrom', 'saved'].forEach(k => {
+          ['tasks', 'dayTasks', 'taskLinks', 'weekGoals', 'notes', 'exp', 'inc', 'baseInc', 'extraInc', 'rolloverFrom', 'saved', 'walletsBase', 'walletRollover'].forEach(k => {
             // دمج ذكي مع البيانات المحلية لمنع تصفير أي يوم
             S[k] = Object.assign({}, S[k] || {}, data[k] || {});
           });
@@ -3580,6 +3637,15 @@
         if (!S.rolloverFrom) S.rolloverFrom = {};
         if (prevRemain > 0) {
           S.rolloverFrom[idx] = prevRemain;
+        }
+        if (!S.walletRollover) S.walletRollover = {};
+        if (!S.walletRollover[idx]) {
+          const prevW = getDayWalletBalances(idx - 1);
+          S.walletRollover[idx] = {
+            cash: Math.max(0, prevW.cash),
+            instapay: Math.max(0, prevW.instapay),
+            debit: Math.max(0, prevW.debit)
+          };
         }
       }
 
@@ -4090,6 +4156,14 @@
             <option value="أخرى">📦 أخرى</option>
           `;
         }
+        const walletSel = document.getElementById('exp-wallet');
+        if (walletSel) {
+          walletSel.innerHTML = `
+            <option value="cash">💵 كاش</option>
+            <option value="instapay">⚡ إنستاباي</option>
+            <option value="debit">💳 ديبت كارد</option>
+          `;
+        }
         if (submitBtn) {
           submitBtn.textContent = '+ إضافة مصروف';
           submitBtn.style.background = 'var(--gold)';
@@ -4116,6 +4190,14 @@
             <option value="أخرى">📦 أخرى</option>
           `;
         }
+        const walletSel = document.getElementById('exp-wallet');
+        if (walletSel) {
+          walletSel.innerHTML = `
+            <option value="instapay">⚡ إنستاباي</option>
+            <option value="debit">💳 ديبت كارد</option>
+            <option value="cash">💵 كاش</option>
+          `;
+        }
         if (submitBtn) {
           submitBtn.textContent = '+ إضافة دخل (+)';
           submitBtn.style.background = '#00ff88';
@@ -4129,23 +4211,25 @@
       const descInp = document.getElementById('exp-desc');
       const amtInp = document.getElementById('exp-amt');
       const catInp = document.getElementById('exp-cat');
+      const walletInp = document.getElementById('exp-wallet');
       if (!descInp || !amtInp || !catInp) return;
       const desc = descInp.value.trim();
       const amt = parseFloat(amtInp.value);
       const cat = catInp.value;
+      const wallet = walletInp ? walletInp.value : (currentTxMode === 'exp' ? 'cash' : 'instapay');
       if (!desc || !amt || amt <= 0) return;
 
       const idx = S.cur;
 
       if (currentTxMode === 'exp') {
-        // تسجيل مصروف
+        // تسجيل مصروف محدد بالمحفظة
         if (!S.exp[idx]) S.exp[idx] = [];
-        S.exp[idx].push({ id: Date.now() + Math.random(), desc: desc, amt: amt, cat: cat });
+        S.exp[idx].push({ id: Date.now() + Math.random(), desc: desc, amt: amt, cat: cat, wallet: wallet });
       } else {
-        // تسجيل دخل إضافي: يضاف في سجل الدخول الإضافية ويزيد دخل اليوم تلقائياً
+        // تسجيل دخل إضافي محدد بالمحفظة
         if (!S.extraInc) S.extraInc = {};
         if (!S.extraInc[idx]) S.extraInc[idx] = [];
-        S.extraInc[idx].push({ id: Date.now() + Math.random(), desc: desc, amt: amt, cat: cat });
+        S.extraInc[idx].push({ id: Date.now() + Math.random(), desc: desc, amt: amt, cat: cat, wallet: wallet });
 
         // تحديث إجمالي الدخل المتاح تلقائياً
         const { totalAvailable } = getDayIncomeDetails(idx);
@@ -4179,6 +4263,136 @@
       syncToCloud();
     }
 
+    const WALLET_LABELS = {
+      'cash': '💵 كاش',
+      'instapay': '⚡ إنستاباي',
+      'debit': '💳 ديبت كارد'
+    };
+
+    function getWalletKey(wallet, cat, desc) {
+      if (wallet === 'instapay' || wallet === 'debit' || wallet === 'cash') return wallet;
+      const text = ((cat || '') + ' ' + (desc || '')).toLowerCase();
+      if (/instapay|انستاباي|إنستاباي|فودافون|فودافون\s*كاش|محفظة|اورنج|اتصالات\s*كاش|وي\s*باي|تطبيق\s*بنكي/i.test(text)) {
+        return 'instapay';
+      }
+      if (/debit|credit|card|فيزا|كارت|بطاقة|بنك|تحويل\s*بنكي|pos|atm|ماكينة|مشتريات/i.test(text)) {
+        return 'debit';
+      }
+      return 'cash';
+    }
+
+    function getDayWalletBalances(idx) {
+      let roll = { cash: 0, instapay: 0, debit: 0 };
+      if (S.walletRollover && S.walletRollover[idx]) {
+        roll.cash = parseFloat(S.walletRollover[idx].cash) || 0;
+        roll.instapay = parseFloat(S.walletRollover[idx].instapay) || 0;
+        roll.debit = parseFloat(S.walletRollover[idx].debit) || 0;
+      } else if (S.rolloverFrom && S.rolloverFrom[idx] !== undefined) {
+        roll.cash = parseFloat(S.rolloverFrom[idx]) || 0;
+      }
+
+      const totalBase = (S.baseInc && S.baseInc[idx] !== undefined) ? (parseFloat(S.baseInc[idx]) || 0) : 0;
+      let baseAlloc = { cash: totalBase, instapay: 0, debit: 0 };
+      if (S.walletsBase && S.walletsBase[idx]) {
+        baseAlloc.cash = S.walletsBase[idx].cash !== undefined ? (parseFloat(S.walletsBase[idx].cash) || 0) : totalBase;
+        baseAlloc.instapay = parseFloat(S.walletsBase[idx].instapay) || 0;
+        baseAlloc.debit = parseFloat(S.walletsBase[idx].debit) || 0;
+      }
+
+      let extraIn = { cash: 0, instapay: 0, debit: 0 };
+      const extras = (S.extraInc && S.extraInc[idx]) ? S.extraInc[idx] : [];
+      extras.forEach(e => {
+        const amt = parseFloat(e.amt) || 0;
+        const w = getWalletKey(e.wallet, e.cat, e.desc);
+        extraIn[w] = (extraIn[w] || 0) + amt;
+      });
+
+      let expOut = { cash: 0, instapay: 0, debit: 0 };
+      const exps = (S.exp && S.exp[idx]) ? S.exp[idx] : [];
+      exps.forEach(e => {
+        const amt = parseFloat(e.amt) || 0;
+        const w = getWalletKey(e.wallet, e.cat, e.desc);
+        expOut[w] = (expOut[w] || 0) + amt;
+      });
+
+      const cash = roll.cash + baseAlloc.cash + extraIn.cash - expOut.cash;
+      const instapay = roll.instapay + baseAlloc.instapay + extraIn.instapay - expOut.instapay;
+      const debit = roll.debit + baseAlloc.debit + extraIn.debit - expOut.debit;
+      const total = cash + instapay + debit;
+
+      return { cash, instapay, debit, total, roll, baseAlloc, extraIn, expOut };
+    }
+
+    function editWalletBalance(walletKey) {
+      const names = {
+        'instapay': '⚡ إنستاباي (InstaPay)',
+        'debit': '💳 ديبت كارد (Debit Card)',
+        'cash': '💵 كاش (Cash)'
+      };
+      const w = getDayWalletBalances(S.cur);
+      const currentVal = Math.round(w[walletKey]);
+      const input = prompt(`تعديل رصيد ${names[walletKey]} المتبقي لليوم:\n(الرصيد المحسوب حالياً: ${currentVal} ج)`, currentVal);
+      if (input === null) return;
+      const targetVal = parseFloat(input);
+      if (isNaN(targetVal)) return;
+
+      if (!S.walletsBase) S.walletsBase = {};
+      if (!S.walletsBase[S.cur]) {
+        S.walletsBase[S.cur] = {
+          cash: w.baseAlloc.cash,
+          instapay: w.baseAlloc.instapay,
+          debit: w.baseAlloc.debit
+        };
+      }
+
+      const diff = targetVal - currentVal;
+      S.walletsBase[S.cur][walletKey] = (S.walletsBase[S.cur][walletKey] || 0) + diff;
+
+      const newTotalBase = Math.max(0, (S.walletsBase[S.cur].cash || 0) + (S.walletsBase[S.cur].instapay || 0) + (S.walletsBase[S.cur].debit || 0));
+      S.baseInc[S.cur] = newTotalBase;
+      const { totalAvailable } = getDayIncomeDetails(S.cur);
+      S.inc[S.cur] = totalAvailable;
+
+      renderExp(S.cur);
+      syncToCloud();
+    }
+
+    function promptSplitWallets() {
+      const w = getDayWalletBalances(S.cur);
+      const instaIn = prompt(`1: أدخل رصيد ⚡ إنستاباي (الحالي: ${Math.round(w.instapay)} ج)`, Math.round(w.instapay));
+      if (instaIn === null) return;
+
+      const debitIn = prompt(`2: أدخل رصيد 💳 ديبت كارد (الحالي: ${Math.round(w.debit)} ج)`, Math.round(w.debit));
+      if (debitIn === null) return;
+
+      const cashIn = prompt(`3: أدخل رصيد 💵 كاش (الحالي: ${Math.round(w.cash)} ج)`, Math.round(w.cash));
+      if (cashIn === null) return;
+
+      const newInsta = parseFloat(instaIn) || 0;
+      const newDebit = parseFloat(debitIn) || 0;
+      const newCash = parseFloat(cashIn) || 0;
+
+      if (!S.walletsBase) S.walletsBase = {};
+      const diffInsta = newInsta - w.instapay;
+      const diffDebit = newDebit - w.debit;
+      const diffCash = newCash - w.cash;
+
+      const curBase = S.walletsBase[S.cur] || { cash: w.baseAlloc.cash, instapay: w.baseAlloc.instapay, debit: w.baseAlloc.debit };
+      S.walletsBase[S.cur] = {
+        instapay: (curBase.instapay || 0) + diffInsta,
+        debit: (curBase.debit || 0) + diffDebit,
+        cash: (curBase.cash || 0) + diffCash
+      };
+
+      const newTotalBase = Math.max(0, (S.walletsBase[S.cur].cash || 0) + (S.walletsBase[S.cur].instapay || 0) + (S.walletsBase[S.cur].debit || 0));
+      S.baseInc[S.cur] = newTotalBase;
+      const { totalAvailable } = getDayIncomeDetails(S.cur);
+      S.inc[S.cur] = totalAvailable;
+
+      renderExp(S.cur);
+      syncToCloud();
+    }
+
     function renderExp(idx) {
       const exps = S.exp[idx] || [];
       const extraIncs = (S.extraInc && S.extraInc[idx]) ? S.extraInc[idx] : [];
@@ -4193,23 +4407,35 @@
           listDiv.innerHTML = '<div style="text-align:center;padding:10px;color:var(--muted2);font-size:12px;">لا يوجد مصاريف أو دخول مسجلة اليوم</div>';
         } else {
           let html = '';
-          // عرض الدخول الإضافية بالأخضر
+          // عرض الدخول الإضافية بالأخضر مع شارة المحفظة
           extraIncs.forEach(e => {
+            const wKey = getWalletKey(e.wallet, e.cat, e.desc);
+            const wBadge = WALLET_LABELS[wKey] || '💵 كاش';
             html += `
               <div class="exp-item" style="background:rgba(0,255,136,0.05); border-radius:4px; padding:6px 8px; margin-bottom:4px; border:1px solid rgba(0,255,136,0.2);">
                 <div class="exp-cat-dot" style="background:#00ff88"></div>
-                <div class="exp-desc" style="color:#00ff88; font-weight:700;">+ ${e.desc} <span style="font-size:9.5px;color:var(--muted2)">(${e.cat})</span></div>
+                <div class="exp-desc" style="color:#00ff88; font-weight:700;">
+                  + ${e.desc}
+                  <span style="font-size:9.5px;color:var(--muted2)">(${e.cat})</span>
+                  <span style="font-size:9.5px; padding:1px 5px; border-radius:3px; background:#181818; border:1px solid rgba(0,255,136,0.3); color:#00ff88; font-weight:normal; margin-right:4px;">${wBadge}</span>
+                </div>
                 <div class="exp-amt" style="color:#00ff88; font-weight:800;">+${e.amt.toLocaleString()} ج</div>
                 <span class="exp-del" onclick="delIncomeItem(${idx}, ${e.id})" title="حذف الدخل">✕</span>
               </div>
             `;
           });
-          // عرض المصاريف العادية
+          // عرض المصاريف العادية مع شارة المحفظة
           exps.forEach(e => {
+            const wKey = getWalletKey(e.wallet, e.cat, e.desc);
+            const wBadge = WALLET_LABELS[wKey] || '💵 كاش';
             html += `
               <div class="exp-item">
                 <div class="exp-cat-dot" style="background:${CAT_C[e.cat] || 'var(--gold)'}"></div>
-                <div class="exp-desc">${e.desc} <span style="font-size:9.5px;color:var(--muted2)">(${e.cat})</span></div>
+                <div class="exp-desc">
+                  ${e.desc}
+                  <span style="font-size:9.5px;color:var(--muted2)">(${e.cat})</span>
+                  <span style="font-size:9.5px; padding:1px 5px; border-radius:3px; background:#1c1c1c; border:1px solid #333; color:var(--text2); margin-right:4px;">${wBadge}</span>
+                </div>
                 <div class="exp-amt">${e.amt.toLocaleString()} ج</div>
                 <span class="exp-del" onclick="delExpenseItem(${idx}, ${e.id})" title="حذف المصروف">✕</span>
               </div>
@@ -4249,12 +4475,27 @@
       const totalIncEl = document.getElementById('total-income-val');
       if (totalIncEl) totalIncEl.textContent = totalAvailable.toLocaleString() + ' ج';
 
-      // 5. حساب المتبقي الصافي من اليوم
-      const remain = totalAvailable - totalExp;
+      // 5. حساب المتبقي الصافي من اليوم وتوزيعه على المحافظ الثلاثة (إنستاباي / ديبت كارد / كاش)
+      const w = getDayWalletBalances(idx);
       const remainEl = document.getElementById('remain-val');
       if (remainEl) {
-        remainEl.textContent = remain.toLocaleString() + ' ج';
-        remainEl.style.color = remain >= 0 ? 'var(--green)' : 'var(--red)';
+        remainEl.textContent = Math.round(w.total).toLocaleString() + ' ج';
+        remainEl.style.color = w.total >= 0 ? 'var(--green)' : 'var(--red)';
+      }
+      const wInstaEl = document.getElementById('wallet-val-instapay');
+      const wDebitEl = document.getElementById('wallet-val-debit');
+      const wCashEl = document.getElementById('wallet-val-cash');
+      if (wInstaEl) {
+        wInstaEl.textContent = Math.round(w.instapay).toLocaleString() + ' ج';
+        wInstaEl.style.color = w.instapay >= 0 ? '#c084fc' : 'var(--red)';
+      }
+      if (wDebitEl) {
+        wDebitEl.textContent = Math.round(w.debit).toLocaleString() + ' ج';
+        wDebitEl.style.color = w.debit >= 0 ? '#3498db' : 'var(--red)';
+      }
+      if (wCashEl) {
+        wCashEl.textContent = Math.round(w.cash).toLocaleString() + ' ج';
+        wCashEl.style.color = w.cash >= 0 ? '#00ff88' : 'var(--red)';
       }
     }
 
@@ -4290,9 +4531,14 @@
     // حفظ دخل اليوم الأساسي دون المساس بالمرحل من الأمس أو الدخول الإضافية
     function saveBaseIncome(v) {
       if (!S.baseInc) S.baseInc = {};
-      S.baseInc[S.cur] = parseFloat(v) || 0;
+      const num = parseFloat(v) || 0;
+      S.baseInc[S.cur] = num;
+      if (S.walletsBase && S.walletsBase[S.cur]) {
+        const other = (S.walletsBase[S.cur].instapay || 0) + (S.walletsBase[S.cur].debit || 0);
+        S.walletsBase[S.cur].cash = Math.max(0, num - other);
+      }
       const { totalAvailable } = getDayIncomeDetails(S.cur);
-      S.inc[S.cur] = totalAvailable; // تحديث الإجمالي للتوافق
+      S.inc[S.cur] = totalAvailable;
       renderExp(S.cur);
       syncToCloud();
     }
@@ -4307,13 +4553,21 @@
       const idx = S.cur;
       S.saved[idx] = !S.saved[idx];
 
-      // إذا تم وضع علامة الإنجاز لليوم، يترحل المتبقي إلى اليوم التالي
+      // إذا تم وضع علامة الإنجاز لليوم، يترحل المتبقي والمحافظ إلى اليوم التالي
       if (S.saved[idx]) {
         const remain = calcDayRemain(idx);
         const nextIdx = idx + 1;
         if (nextIdx < NUM_DAYS) {
           if (!S.rolloverFrom) S.rolloverFrom = {};
           S.rolloverFrom[nextIdx] = Math.max(0, remain);
+
+          const w = getDayWalletBalances(idx);
+          if (!S.walletRollover) S.walletRollover = {};
+          S.walletRollover[nextIdx] = {
+            cash: Math.max(0, w.cash),
+            instapay: Math.max(0, w.instapay),
+            debit: Math.max(0, w.debit)
+          };
         }
       }
 
@@ -4615,6 +4869,14 @@
             <div class="stat-icon">⚖</div>
             <div class="stat-num" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'}">${net.toLocaleString()} ج</div>
             <div class="stat-label">صافي الرصيد</div>
+            ${(latestDayIdx >= 0) ? `
+            <div style="font-size:9.5px; margin-top:5px; color:var(--text2); display:flex; gap:6px; flex-wrap:wrap; justify-content:center; font-family:'Space Mono', monospace;">
+              <span style="color:#c084fc;">⚡ ${Math.round(getDayWalletBalances(latestDayIdx).instapay).toLocaleString()}</span>
+              <span>·</span>
+              <span style="color:#3498db;">💳 ${Math.round(getDayWalletBalances(latestDayIdx).debit).toLocaleString()}</span>
+              <span>·</span>
+              <span style="color:#00ff88;">💵 ${Math.round(getDayWalletBalances(latestDayIdx).cash).toLocaleString()}</span>
+            </div>` : ''}
           </div>
           <div class="stat-card">
             <div class="stat-icon">📊</div>

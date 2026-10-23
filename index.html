@@ -2301,6 +2301,7 @@
                     <select class="exp-add-select" id="exp-cat">
                       <option value="أكل">🍔 أكل</option>
                       <option value="مواصلات">🚗 مواصلات</option>
+                      <option value="اشتراكات">🔄 اشتراكات</option>
                       <option value="تعليم">📚 تعليم</option>
                       <option value="رياضة">💪 رياضة</option>
                       <option value="ترفيه">🎮 ترفيه</option>
@@ -2550,7 +2551,7 @@
     const NUM_DAYS = 3650;
     const AR_D = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     const AR_M = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-    const CAT_C = { 'أكل': '#FF4D00', 'مواصلات': '#3498db', 'تعليم': '#9b59b6', 'رياضة': '#00ff88', 'ترفيه': '#f39c12', 'ملابس': '#e91e63', 'أخرى': '#95a5a6' };
+    const CAT_C = { 'أكل': '#FF4D00', 'مواصلات': '#3498db', 'اشتراكات': '#00bcd4', 'تعليم': '#9b59b6', 'رياضة': '#00ff88', 'ترفيه': '#f39c12', 'ملابس': '#e91e63', 'أخرى': '#95a5a6' };
 
     function gd(i) { const d = new Date(START); d.setDate(d.getDate() + i); return d; }
     function di(d) { return Math.round((d - new Date(START.toDateString())) / (864e5)); }
@@ -2825,6 +2826,7 @@
 
     // دالة تصنيف المصاريف تلقائياً حسب الوصف
     function categorizeExpense(desc) {
+      if (/اشتراك|اشتراكات|subscription|sub|نتفلكس|netflix|spotify|سبوتيفاي|انترنت|نت|راوتر|واي\s*فاي|فاتورة|فاتوره|تجديد|شات\s*جي\s*بي\s*تي|chatgpt|youtube\s*premium|يوتيوب\s*بريميوم/i.test(desc)) return 'اشتراكات';
       if (/مواصلات|uber|careem|taxi|bus|مترو|تاكسي|بنزين|كارته|كارتة|قطار|عربيه|عربية|مشوار|شروق|سفر|transport/i.test(desc)) return 'مواصلات';
       if (/أكل|اكل|طعام|غدا|غداء|فطار|عشا|عشاء|شرب|قهوة|قهوه|كافيه|شاي|سناك|حلويات|ماك|مطعم|food|lunch|dinner|breakfast|burger|pizza|coffee/i.test(desc)) return 'أكل';
       if (/تعليم|كتب|كتاب|كورس|course|book|مذكرات|شيت|جامعة|دراسة|study/i.test(desc)) return 'تعليم';
@@ -4080,6 +4082,7 @@
           catSel.innerHTML = `
             <option value="أكل">🍔 أكل</option>
             <option value="مواصلات">🚗 مواصلات</option>
+            <option value="اشتراكات">🔄 اشتراكات</option>
             <option value="تعليم">📚 تعليم</option>
             <option value="رياضة">💪 رياضة</option>
             <option value="ترفيه">🎮 ترفيه</option>
@@ -4471,6 +4474,7 @@
     const CAT_ICONS = {
       'أكل': '🍔',
       'مواصلات': '🚗',
+      'اشتراكات': '🔄',
       'تعليم': '📚',
       'رياضة': '💪',
       'ترفيه': '🎮',
@@ -4484,7 +4488,7 @@
       const today = new Date();
 
       let totalExp = 0, totalRealInc = 0, totalRolloverIgnored = 0;
-      const catTotals = { 'أكل': 0, 'مواصلات': 0, 'تعليم': 0, 'رياضة': 0, 'ترفيه': 0, 'ملابس': 0, 'أخرى': 0 };
+      const catTotals = { 'أكل': 0, 'مواصلات': 0, 'اشتراكات': 0, 'تعليم': 0, 'رياضة': 0, 'ترفيه': 0, 'ملابس': 0, 'أخرى': 0 };
       const dailyData = [];
       let maxDayExp = 0;
       let maxDayNum = null;
